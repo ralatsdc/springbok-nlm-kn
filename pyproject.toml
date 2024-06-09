@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "ncbi-cell"
+version = "0.1.0"
+description = "Explore various tools of potential use for NCBI-Cell development"
+authors = ["Raymond LeClair <raymond.leclair@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+cellxgene-census = "^1.14.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
