@@ -2,3 +2,4 @@
 .openai_cache.db
 .venv
 .zshenv
+__pycache__
