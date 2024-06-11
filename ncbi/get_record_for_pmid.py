@@ -1,3 +1,4 @@
+# https://www.ncbi.nlm.nih.gov/books/NBK25499/
 import logging
 import os
 import requests
@@ -5,11 +6,11 @@ from urllib import parse
 
 from bs4 import BeautifulSoup
 
-
 EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 EMAIL = "raymond.leclair@gmail.com"
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY")
 PUBMED = "pubmed"
+PUBMEDCENTRAL = "pmc"
 
 
 def get_pmid(title):
@@ -49,9 +50,12 @@ def get_pmid(title):
 def get_record(pmid):
 
     record = {
+        "pmid": pmid,
+        "pmc_id": "",
         "title": "",
         "abstract": "",
         "keywords": [""],
+        "body": "",
     }
 
     fetch_url = EUTILS_URL + "efetch.fcgi"
@@ -82,9 +86,40 @@ def get_record(pmid):
         if found:
             record["keywords"] = [tag.text for tag in fullsoup.find_all("Keyword")]
 
+        found = (
+            fullsoup.find("PubmedData")
+            .find("ArticleIdList")
+            .find("ArticleId", {"IdType": "pmc"})
+        )
+        if found:
+            record["pmc_id"] = found.text
+
+            params = {
+                "db": PUBMEDCENTRAL,
+                "id": record["pmc_id"],
+                "rettype": "xml",
+                "email": EMAIL,
+                "api_key": NCBI_API_KEY,
+            }
+
+            response = requests.get(fetch_url, params=parse.urlencode(params, safe=","))
+
+            if response.status_code == 200:
+                xml_data = response.text
+                fullsoup = BeautifulSoup(xml_data, "xml")
+
+                found = fullsoup.find("pmc-articleset").find("article").find("body")
+                if found:
+                    record["body"] = found.text
+
+            else:
+                logging.error(
+                    f"Encountered error in fetching from PubMed Central: {response.status_code}"
+                )
+
     else:
         logging.error(
-            f"Encountered error in fetching from PubMed Central: {response.status_code}"
+            f"Encountered error in fetching from PubMed: {response.status_code}"
         )
 
     return record
@@ -94,8 +129,10 @@ def main():
     title = "Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells"
     pmid = get_pmid(title)
     record = get_record(pmid)
-    print(record)
+    return record
 
 
 if __name__ == "__main__":
-    main()
+    record = main()
+    print(record["title"])
+    print(record["pmid"])
