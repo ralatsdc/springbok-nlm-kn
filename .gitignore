@@ -2,4 +2,6 @@
 .openai_cache.db
 .venv
 .zshenv
+*.out
+*.parquet
 __pycache__

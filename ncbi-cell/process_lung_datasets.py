@@ -1,9 +1,11 @@
 # https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html
 import logging
+from multiprocessing.pool import Pool, ThreadPool
 import os
 import re
 import requests
 import subprocess
+from time import sleep
 from urllib import parse
 
 from bs4 import BeautifulSoup
@@ -14,6 +16,7 @@ import pandas as pd
 EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 EMAIL = "raymond.leclair@gmail.com"
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY")
+NCBI_API_SLEEP = 1
 PUBMED = "pubmed"
 PUBMEDCENTRAL = "pmc"
 
@@ -87,7 +90,8 @@ def get_title(citation):
         return citation_url, title
 
     citation_url = m1.group(1)
-    print(f"citation_url: {citation_url}")
+
+    print(f"Getting title for citation URL: {citation_url}")
 
     response = requests.get(citation_url)
 
@@ -123,10 +127,29 @@ def get_title(citation):
             if m2:
                 title = m2.group(1)
 
-    return citation_url, title
+    print(f"Found title: '{title}' for citation URL: {citation_url}")
+
+    return title
 
 
-def get_pmid(title):
+def get_titles(lung_datasets):
+
+    titles = []
+
+    citations = [c for c in lung_datasets.citation]
+    with ThreadPool(8) as p:
+        titles = p.map(get_title, citations)
+
+    # for citation in citations:
+    #     title = get_title(citation)
+    #     titles.append(title)
+
+    return list(set([title for title in titles if title is not None]))
+
+
+def get_pmid_for_title(title):
+
+    print(f"Getting PMID for title: '{title}'")
 
     pmid = None
 
@@ -142,14 +165,31 @@ def get_pmid(title):
         "api_key": NCBI_API_KEY,
     }
 
+    sleep(NCBI_API_SLEEP)
+
     response = requests.get(search_url, params=parse.urlencode(params, safe=","))
 
     if response.status_code == 200:
         data = response.json()
         resultcount = int(data["esearchresult"]["count"])
         if resultcount > 1:
-            logging.warning("PubMed returned more than one result. Returning first.")
-        pmid = data["esearchresult"]["idlist"][0]
+            logging.warning(f"PubMed returned more than one result for title: {title}")
+            for _pmid in data["esearchresult"]["idlist"]:
+                _title = get_title_for_pmid(_pmid)
+                if (
+                    _title == title + "."
+                ):  # PubMedCentral includes period in title, PubMed does not
+                    pmid = _pmid
+                    print(f"Found PMID: {pmid} for title: '{title}'")
+                    break
+
+            if not pmid:
+                pmid = data["esearchresult"]["idlist"][0]
+                print(f"Using first PMID: {pmid} for title '{title}'")
+
+        else:
+            pmid = data["esearchresult"]["idlist"][0]
+            print(f"Found PMID: {pmid} for title: '{title}'")
 
     elif response.status_code == 429:
         logging.error("Too many requests to NCBI API. Try again later, or use API key.")
@@ -160,53 +200,93 @@ def get_pmid(title):
     return pmid
 
 
-def get_pmids(lung_datasets):
+def get_title_for_pmid(pmid):
+
+    title = None
+
+    fetch_url = EUTILS_URL + "efetch.fcgi"
+
+    params = {
+        "db": PUBMED,
+        "id": pmid,
+        "rettype": "xml",
+        "email": EMAIL,
+        "api_key": NCBI_API_KEY,
+    }
+
+    sleep(NCBI_API_SLEEP)
+
+    response = requests.get(fetch_url, params=parse.urlencode(params, safe=","))
+
+    if response.status_code == 200:
+        xml_data = response.text
+        fullsoup = BeautifulSoup(xml_data, "xml")
+
+        found = fullsoup.find("ArticleTitle")
+        if found:
+            title = found.text
+
+    else:
+        logging.error(
+            f"Encountered error in fetching from PubMed: {response.status_code}"
+        )
+
+    return title
+
+
+def get_pmids(titles):
 
     pmids = []
 
-    for citation in lung_datasets.citation:
+    with Pool(8) as p:
+        pmids = p.map(get_pmid_for_title, titles)
 
-        citation_url, title = get_title(citation)
-        
-        if title != "none":
-            print(f"title: {title}")
-            pmid = get_pmid(title)
-            if pmid:
-                print(f"pmid: {pmid}")
-                pmids.append(pmid)
+    # for title in titles:
+    #     pmid = get_pmid_for_title(title)
+    #     pmids.append(pmid)
 
-            else:
-                logging.warning(f"Could not get pmid for: {citation_url}")
-
-        else:
-            logging.warning(f"Could not get title for: {citation_url}")
-
-    return pmids
+    return list(set([pmid for pmid in pmids if pmid is not None]))
 
 
 def run_ontogpt_pubmed_annotate(pmid):
     """
     run_ontogpt_pubmed_annotate("38540357")
     """
-    subprocess.run(
-        [
-            "ontogpt",
-            "pubmed-annotate",
-            "--template",
-            "cell_type",
-            pmid,
-            "--limit",
-            "1",
-            "--output",
-            f"{pmid}.out",
-        ],
-        capture_output=True,
-    )
+    if not os.path.exists(f"{pmid}.out"):
+        print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
+
+        subprocess.run(
+            [
+                "ontogpt",
+                "pubmed-annotate",
+                "--template",
+                "cell_type",
+                pmid,
+                "--limit",
+                "1",
+                "--output",
+                f"{pmid}.out",
+            ],
+        )
+
+        print(f"Completed ontogpt pubmed-annotate for PMID: {pmid}")
+
+    else:
+        print(f"Ontogpt pubmed-annotate out for PMID: {pmid} exists")
+
+
+def run_ontogpt(pmids):
+
+    with ThreadPool(8) as p:
+        p.map(run_ontogpt_pubmed_annotate, pmids)
 
 
 if __name__ == "__main__":
 
     lung_obs, lung_datasets = get_lung_obs_and_datasets()
 
-    pmids = get_pmids(lung_datasets)
-    print(pmids)
+    titles = get_titles(lung_datasets)
+
+    pmids = get_pmids(titles)
+
+    run_ontogpt(pmids)
