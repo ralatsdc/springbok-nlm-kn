@@ -284,7 +284,7 @@ def run_ontogpt_pubmed_annotate(pmid):
     """
     run_ontogpt_pubmed_annotate("38540357")
     """
-    output_path = (f"{ONTOGPT_DIR}/{pmid}.out",)
+    output_path = f"{ONTOGPT_DIR}/{pmid}.out"
     if not os.path.exists(output_path):
         print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
 
