@@ -2,6 +2,7 @@
 import logging
 from multiprocessing.pool import Pool, ThreadPool
 import os
+import pickle
 import re
 import requests
 import subprocess
@@ -97,10 +98,9 @@ def get_title(citation):
 
     try_wget = True
     if response.status_code == 200:
-
         html_data = response.text
-        fullsoup = BeautifulSoup(html_data, features="lxml")
 
+        fullsoup = BeautifulSoup(html_data, features="lxml")
         for selector in selectors:
             selected = fullsoup.select(selector)
             if selected:
@@ -136,15 +136,27 @@ def get_titles(lung_datasets):
 
     titles = []
 
-    citations = [c for c in lung_datasets.citation]
-    with ThreadPool(8) as p:
-        titles = p.map(get_title, citations)
+    titles_pickle = "titles.pickle"
 
-    # for citation in citations:
-    #     title = get_title(citation)
-    #     titles.append(title)
+    if not os.path.exists(titles_pickle):
 
-    return list(set([title for title in titles if title is not None]))
+        print("Getting titles")
+        citations = [c for c in lung_datasets.citation]
+        with Pool(8) as p:
+            titles = p.map(get_title, citations)
+        titles = list(set([title for title in titles if title is not None]))
+
+        print("Dumping titles")
+        with open(titles_pickle, "wb") as f:
+            pickle.dump(titles, f, pickle.HIGHEST_PROTOCOL)
+
+    else:
+
+        print("Loading titles")
+        with open(titles_pickle, "rb") as f:
+            titles = pickle.load(f)
+
+    return titles
 
 
 def get_pmid_for_title(title):
@@ -171,6 +183,7 @@ def get_pmid_for_title(title):
 
     if response.status_code == 200:
         data = response.json()
+
         resultcount = int(data["esearchresult"]["count"])
         if resultcount > 1:
             logging.warning(f"PubMed returned more than one result for title: {title}")
@@ -220,8 +233,8 @@ def get_title_for_pmid(pmid):
 
     if response.status_code == 200:
         xml_data = response.text
-        fullsoup = BeautifulSoup(xml_data, "xml")
 
+        fullsoup = BeautifulSoup(xml_data, "xml")
         found = fullsoup.find("ArticleTitle")
         if found:
             title = found.text
@@ -238,21 +251,34 @@ def get_pmids(titles):
 
     pmids = []
 
-    with Pool(8) as p:
-        pmids = p.map(get_pmid_for_title, titles)
+    pmids_pickle = "pmids.pickle"
 
-    # for title in titles:
-    #     pmid = get_pmid_for_title(title)
-    #     pmids.append(pmid)
+    if not os.path.exists(pmids_pickle):
 
-    return list(set([pmid for pmid in pmids if pmid is not None]))
+        print("Getting PMIDs")
+        with Pool(8) as p:
+            pmids = p.map(get_pmid_for_title, titles)
+        pmids = list(set([pmid for pmid in pmids if pmid is not None]))
+
+        print("Dumping PMIDs")
+        with open(pmids_pickle, "wb") as f:
+            pickle.dump(pmids, f, pickle.HIGHEST_PROTOCOL)
+
+    else:
+
+        print("Loading PMIDs")
+        with open(pmids_pickle, "rb") as f:
+            pmids = pickle.load(f)
+
+    return pmids
 
 
 def run_ontogpt_pubmed_annotate(pmid):
     """
     run_ontogpt_pubmed_annotate("38540357")
     """
-    if not os.path.exists(f"{pmid}.out"):
+    output_path = (f"{ONTOGPT_DIR}/{pmid}.out",)
+    if not os.path.exists(output_path):
         print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
 
         subprocess.run(
@@ -265,23 +291,25 @@ def run_ontogpt_pubmed_annotate(pmid):
                 "--limit",
                 "1",
                 "--output",
-                f"{pmid}.out",
+                output_path,
             ],
         )
 
         print(f"Completed ontogpt pubmed-annotate for PMID: {pmid}")
 
     else:
-        print(f"Ontogpt pubmed-annotate out for PMID: {pmid} exists")
+        print(f"Ontogpt pubmed-annotate output for PMID: {pmid} exists")
 
 
 def run_ontogpt(pmids):
 
-    with ThreadPool(8) as p:
+    with Pool(8) as p:
         p.map(run_ontogpt_pubmed_annotate, pmids)
 
 
 if __name__ == "__main__":
+
+    __spec__ = None  # Workaround for Pool() in ipython
 
     lung_obs, lung_datasets = get_lung_obs_and_datasets()
 
