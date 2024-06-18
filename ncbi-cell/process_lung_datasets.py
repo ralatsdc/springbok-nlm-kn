@@ -1,4 +1,5 @@
 # https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html
+# http://localhost:8889/notebooks/python_raw/get_dataset.ipynb
 import logging
 from multiprocessing.pool import Pool, ThreadPool
 import os
@@ -20,6 +21,12 @@ NCBI_API_KEY = os.environ.get("NCBI_API_KEY")
 NCBI_API_SLEEP = 1
 PUBMED = "pubmed"
 PUBMEDCENTRAL = "pmc"
+
+ONTOGPT_DIR = "ontogpt"
+
+CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
+CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
+CELLXGENE_DIR = "cellxgene"
 
 
 def get_lung_obs_and_datasets():
@@ -307,6 +314,60 @@ def run_ontogpt(pmids):
         p.map(run_ontogpt_pubmed_annotate, pmids)
 
 
+def get_dataset(dataset_series):
+
+    collection_id = dataset_series.collection_id
+    dataset_id = dataset_series.dataset_id
+
+    dataset_url = f"{CELLXGENE_API_URL_BASE}/curation/v1/collections/{collection_id}/datasets/{dataset_id}"
+
+    response = requests.get(dataset_url)
+    response.raise_for_status()
+
+    if response.status_code != 200:
+        logging.error(f"Could not get dataset for id {dataset_id}")
+        return
+
+    data = response.json()
+    if dataset_id != data["dataset_id"]:
+        logging.error(
+            f"Response dataset id: {data['dataset_id']} does not equal specified dataset id: {dataset_id}"
+        )
+        return
+
+    assets = data["assets"]
+    for asset in assets:
+
+        if asset["filetype"] != "H5AD":
+            continue
+
+        download_filename = f"{CELLXGENE_DIR}/{dataset_id}.{asset['filetype']}"
+        if not os.path.exists(download_filename):
+
+            print(f"Downloading dataset file: {download_filename}")
+
+            with requests.get(asset["url"], stream=True) as response:
+                response.raise_for_status()
+
+                with open(download_filename, "wb") as df:
+                    for chunk in response.iter_content(chunk_size=1024 * 1024):
+                        df.write(chunk)
+
+            print(f"Dataset file: {download_filename} downloaded")
+
+        else:
+
+            print(f"Dataset file: {download_filename} exists")
+
+
+def get_datasets(datasets_df):
+
+    datasets_series = [row for index, row in lung_datasets.iterrows()]
+
+    with Pool(8) as p:
+        p.map(get_dataset, datasets_series)
+
+
 if __name__ == "__main__":
 
     __spec__ = None  # Workaround for Pool() in ipython
@@ -318,3 +379,5 @@ if __name__ == "__main__":
     pmids = get_pmids(titles)
 
     run_ontogpt(pmids)
+
+    get_datasets(lung_datasets)
