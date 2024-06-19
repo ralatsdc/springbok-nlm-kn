@@ -2,7 +2,9 @@
 .openai_cache.db
 .venv
 .zshenv
+*.csv
 *.H5AD
+*.h5ad
 *.out
 *.parquet
 *.pickle
