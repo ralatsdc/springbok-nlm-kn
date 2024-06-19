@@ -11,6 +11,7 @@ python = ">=3.10,<3.12"
 cellxgene-census = "^1.14.1"
 ontogpt = "^0.3.14"
 scikit-misc = "^0.3.1"
+plotly = "^5.22.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
