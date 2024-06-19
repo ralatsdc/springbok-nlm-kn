@@ -1,7 +1,7 @@
 # https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html
 # http://localhost:8889/notebooks/python_raw/get_dataset.ipynb
 import logging
-from multiprocessing.pool import Pool, ThreadPool
+from multiprocessing.pool import Pool
 import os
 import pickle
 import re
