@@ -25,6 +25,14 @@ import nsforest as ns
 from nsforest import nsforesting
 
 
+DATA_DIR = "data"
+
+CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
+CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
+CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
+
+NSFOREST_DIR = f"{DATA_DIR}/nsforest"
+
 EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 EMAIL = "raymond.leclair@gmail.com"
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY")
@@ -32,17 +40,15 @@ NCBI_API_SLEEP = 1
 PUBMED = "pubmed"
 PUBMEDCENTRAL = "pmc"
 
-ONTOGPT_DIR = "ontogpt"
+ONTOGPT_DIR = f"{DATA_DIR}/ontogpt"
 
-CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
-CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
-CELLXGENE_DIR = "cellxgene"
+NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
 
 
 def get_lung_obs_and_datasets():
 
-    lung_obs_parquet = "lung_obs.parquet"
-    lung_datasets_parquet = "lung_datasets.parquet"
+    lung_obs_parquet = f"{NCBI_CELL_DIR}/lung_obs.parquet"
+    lung_datasets_parquet = f"{NCBI_CELL_DIR}/lung_datasets.parquet"
 
     if not os.path.exists(lung_obs_parquet) or not os.path.exists(
         lung_datasets_parquet
@@ -153,7 +159,7 @@ def get_titles(lung_datasets):
 
     titles = []
 
-    titles_pickle = "titles.pickle"
+    titles_pickle = f"{NCBI_CELL_DIR}/titles.pickle"
 
     if not os.path.exists(titles_pickle):
 
@@ -268,7 +274,7 @@ def get_pmids(titles):
 
     pmids = []
 
-    pmids_pickle = "pmids.pickle"
+    pmids_pickle = f"{NCBI_CELL_DIR}/pmids.pickle"
 
     if not os.path.exists(pmids_pickle):
 
@@ -294,8 +300,9 @@ def run_ontogpt_pubmed_annotate(pmid):
     """
     run_ontogpt_pubmed_annotate("38540357")
     """
-    output_path = f"{ONTOGPT_DIR}/{pmid}.out"
-    if not os.path.exists(output_path):
+    output_filename = f"{pmid}.out"
+    output_filepath = f"{ONTOGPT_DIR}/{output_filename}"
+    if not os.path.exists(output_filepath):
         print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
 
         subprocess.run(
@@ -308,7 +315,7 @@ def run_ontogpt_pubmed_annotate(pmid):
                 "--limit",
                 "1",
                 "--output",
-                output_path,
+                output_filepath,
             ],
         )
 
@@ -351,25 +358,26 @@ def get_dataset(dataset_series):
         if asset["filetype"] != "H5AD":
             continue
 
-        download_filename = f"{CELLXGENE_DIR}/{dataset_id}.{asset['filetype']}"
-        if not os.path.exists(download_filename):
+        dataset_filename = f"{dataset_id}.{asset['filetype']}"
+        dataset_filepath = f"{CELLXGENE_DIR}/{dataset_filename}"
+        if not os.path.exists(dataset_filepath):
 
-            print(f"Downloading dataset file: {download_filename}")
+            print(f"Downloading dataset file: {dataset_filepath}")
 
             with requests.get(asset["url"], stream=True) as response:
                 response.raise_for_status()
 
-                with open(download_filename, "wb") as df:
+                with open(dataset_filepath, "wb") as df:
                     for chunk in response.iter_content(chunk_size=1024 * 1024):
                         df.write(chunk)
 
-            print(f"Dataset file: {download_filename} downloaded")
+            print(f"Dataset file: {dataset_filepath} downloaded")
 
         else:
 
             print(f"Dataset file: {dataset_filepath} exists")
 
-    datasets_series = [row for index, row in lung_datasets.iterrows()]
+    return dataset_filename
 
 
 def get_datasets(datasets_df):
@@ -451,6 +459,9 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
 
 def main():
 
+    lung_obs, lung_datasets = get_lung_obs_and_datasets()
+    titles = get_titles(lung_datasets)
+    pmids = get_pmids(titles)
     run_ontogpt(pmids)
     dataset_filenames = get_datasets(lung_datasets)
     for dataset_filename in dataset_filenames:
