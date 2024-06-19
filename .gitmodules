@@ -1,0 +1,3 @@
+[submodule "NSForest"]
+	path = NSForest
+	url = git@github.com:ralatsdc/NSForest.git
