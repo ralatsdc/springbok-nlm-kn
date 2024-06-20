@@ -390,6 +390,7 @@ def get_datasets(datasets_df):
     return dataset_filenames
 
 
+# TODO: Check validity of cluster_header default value
 def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_id"):
     """
     Notes:
@@ -480,7 +481,9 @@ def main():
         try:
             run_nsforest_on_file(dataset_filename)
         except Exception as ex:
-            print(f"Could not run NS-Forest for unprocessed AnnData file: {dataset_filename}")
+            print(
+                f"Could not run NS-Forest for unprocessed AnnData file: {dataset_filename}"
+            )
 
 
 if __name__ == "__main__":
