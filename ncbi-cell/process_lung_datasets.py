@@ -2,12 +2,13 @@
 #     https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html
 #     http://localhost:8889/notebooks/python_raw/get_dataset.ipynb
 #     https://nsforest.readthedocs.io/en/latest/tutorial.html
+#     https://scanpy.readthedocs.io/en/latest/generated/scanpy.pp.calculate_qc_metrics.html
+#     https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.downsample_counts.html
 
 # TODO: Use pathlib
 import logging
 from multiprocessing.pool import Pool
 import os
-import pickle
 import re
 import requests
 import subprocess
@@ -16,8 +17,6 @@ from urllib import parse
 
 from bs4 import BeautifulSoup
 import cellxgene_census
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import scanpy as sc
 
@@ -48,8 +47,8 @@ NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
 
 def get_lung_obs_and_datasets():
 
-    lung_obs_parquet = f"{NCBI_CELL_DIR}/lung_obs.parquet"
-    lung_datasets_parquet = f"{NCBI_CELL_DIR}/lung_datasets.parquet"
+    lung_obs_parquet = f"{NCBI_CELL_DIR}/up_lung_obs.parquet"
+    lung_datasets_parquet = f"{NCBI_CELL_DIR}/up_lung_datasets.parquet"
 
     if not os.path.exists(lung_obs_parquet) or not os.path.exists(
         lung_datasets_parquet
@@ -73,24 +72,79 @@ def get_lung_obs_and_datasets():
 
         census.close()
 
-        print("Write lung obs parquet")
+        print("Writing unprocessed lung obs parquet")
         lung_obs.to_parquet(lung_obs_parquet)
 
-        print("Finding lung datasets")
+        print("Finding unprocessed lung datasets")
         lung_datasets = datasets[datasets["dataset_id"].isin(lung_obs["dataset_id"])]
 
-        print("Write lung datasets parquet")
+        print("Writing unprocessed lung datasets parquet")
         lung_datasets.to_parquet(lung_datasets_parquet)
 
     else:
 
-        print("Read lung obs parquet")
+        print("Reading unprocessed lung obs parquet")
         lung_obs = pd.read_parquet(lung_obs_parquet)
 
-        print("Read lung datasets parquet")
+        print("Reading unprocessed lung datasets parquet")
         lung_datasets = pd.read_parquet(lung_datasets_parquet)
 
     return lung_obs, lung_datasets
+
+
+def append_titles_pmids_and_dataset_h5ad_files(lung_datasets):
+
+    lung_datasets_parquet = f"{NCBI_CELL_DIR}/pp_lung_datasets.parquet"
+
+    if not os.path.exists(lung_datasets_parquet):
+
+        lung_datasets = append_titles(lung_datasets.copy())
+        lung_datasets = append_pmids(lung_datasets)
+        lung_datasets = append_and_download_dataset_h5ad_files(lung_datasets)
+
+        print("Writing preprocessed lung datasets parquet")
+        lung_datasets.to_parquet(lung_datasets_parquet)
+
+    else:
+
+        print("Reading preprocessed lung datasets parquet")
+        lung_datasets = pd.read_parquet(lung_datasets_parquet)
+
+    return lung_datasets
+
+
+def append_titles(lung_datasets):
+
+    print("Getting titles")
+    citations = [c for c in lung_datasets.citation]
+    with Pool(8) as p:
+        titles = p.map(get_title, citations)
+
+    lung_datasets["citation_title"] = titles
+
+    return lung_datasets
+
+
+def append_pmids(lung_datasets):
+
+    print("Getting PMIDs")
+    with Pool(8) as p:
+        pmids = p.map(get_pmid_for_title, lung_datasets.citation_title)
+
+    lung_datasets["citation_pmid"] = pmids
+
+    return lung_datasets
+
+
+def append_and_download_dataset_h5ad_files(lung_datasets):
+
+    datasets_series = [row for index, row in lung_datasets.iterrows()]
+    with Pool(8) as p:
+        dataset_h5ad_files = p.map(get_and_download_dataset_h5ad_file, datasets_series)
+
+    lung_datasets["dataset_h5ad_file"] = dataset_h5ad_files
+
+    return lung_datasets
 
 
 def get_title(citation):
@@ -156,38 +210,14 @@ def get_title(citation):
     return title
 
 
-def get_titles(lung_datasets):
-
-    titles = []
-
-    titles_pickle = f"{NCBI_CELL_DIR}/titles.pickle"
-
-    if not os.path.exists(titles_pickle):
-
-        print("Getting titles")
-        citations = [c for c in lung_datasets.citation]
-        with Pool(8) as p:
-            titles = p.map(get_title, citations)
-        titles = list(set([title for title in titles if title is not None]))
-
-        print("Dumping titles")
-        with open(titles_pickle, "wb") as f:
-            pickle.dump(titles, f, pickle.HIGHEST_PROTOCOL)
-
-    else:
-
-        print("Loading titles")
-        with open(titles_pickle, "rb") as f:
-            titles = pickle.load(f)
-
-    return titles
-
-
 def get_pmid_for_title(title):
 
     print(f"Getting PMID for title: '{title}'")
 
     pmid = None
+
+    if title is None:
+        return pmid
 
     search_url = EUTILS_URL + "esearch.fcgi"
 
@@ -271,68 +301,7 @@ def get_title_for_pmid(pmid):
     return title
 
 
-def get_pmids(titles):
-
-    pmids = []
-
-    pmids_pickle = f"{NCBI_CELL_DIR}/pmids.pickle"
-
-    if not os.path.exists(pmids_pickle):
-
-        print("Getting PMIDs")
-        with Pool(8) as p:
-            pmids = p.map(get_pmid_for_title, titles)
-        pmids = list(set([pmid for pmid in pmids if pmid is not None]))
-
-        print("Dumping PMIDs")
-        with open(pmids_pickle, "wb") as f:
-            pickle.dump(pmids, f, pickle.HIGHEST_PROTOCOL)
-
-    else:
-
-        print("Loading PMIDs")
-        with open(pmids_pickle, "rb") as f:
-            pmids = pickle.load(f)
-
-    return pmids
-
-
-def run_ontogpt_pubmed_annotate(pmid):
-    """
-    run_ontogpt_pubmed_annotate("38540357")
-    """
-    output_filename = f"{pmid}.out"
-    output_filepath = f"{ONTOGPT_DIR}/{output_filename}"
-    if not os.path.exists(output_filepath):
-        print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
-
-        subprocess.run(
-            [
-                "ontogpt",
-                "pubmed-annotate",
-                "--template",
-                "cell_type",
-                pmid,
-                "--limit",
-                "1",
-                "--output",
-                output_filepath,
-            ],
-        )
-
-        print(f"Completed ontogpt pubmed-annotate for PMID: {pmid}")
-
-    else:
-        print(f"Ontogpt pubmed-annotate output for PMID: {pmid} exists")
-
-
-def run_ontogpt(pmids):
-
-    with Pool(8) as p:
-        p.map(run_ontogpt_pubmed_annotate, pmids)
-
-
-def get_dataset(dataset_series):
+def get_and_download_dataset_h5ad_file(dataset_series):
 
     collection_id = dataset_series.collection_id
     dataset_id = dataset_series.dataset_id
@@ -381,13 +350,15 @@ def get_dataset(dataset_series):
     return dataset_filename
 
 
-def get_datasets(datasets_df):
+def run_nsforest(lung_datasets):
 
-    datasets_series = [row for index, row in datasets_df.iterrows()]
-    with Pool(8) as p:
-        dataset_filenames = p.map(get_dataset, datasets_series)
-
-    return dataset_filenames
+    for dataset_h5ad_file in lung_datasets.dataset_h5ad_file:
+        try:
+            run_nsforest_on_file(dataset_h5ad_file)
+        except Exception as ex:
+            print(
+                f"Could not run NS-Forest for unprocessed AnnData file: {dataset_h5ad_file}"
+            )
 
 
 # TODO: Check validity of cluster_header default value
@@ -413,6 +384,7 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
     may increase.
     """
     # Assign results directory
+    pp_h5ad_filename = f"pp_{h5ad_filename}"
     results_dirname = h5ad_filename.split(".")[0]
     results_dirpath = f"{NSFOREST_DIR}/{results_dirname}"
     if not os.path.exists(results_dirpath):
@@ -426,7 +398,7 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         print("Calculating QC metrics")
         up_metrics = sc.pp.calculate_qc_metrics(up_adata)
         if up_metrics[1]["total_counts"].sum() > TOTAL_COUNTS:
-            print("Downsampling unprocessed")
+            print("Downsampling unprocessed AnnData file")
             ds_adata = sc.pp.downsample_counts(
                 up_adata, total_counts=TOTAL_COUNTS, copy=True
             )
@@ -453,7 +425,6 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         print("Calculating binary scores per gene per cluster")
         pp_adata = ns.pp.prep_binary_scores(pp_adata, cluster_header)
 
-        pp_h5ad_filename = f"pp_{h5ad_filename}"
         pp_h5ad_filepath = f"{results_dirpath}/{pp_h5ad_filename}"
         print(f"Saving preprocessed AnnData file: {pp_h5ad_filepath}")
         pp_adata.write_h5ad(pp_h5ad_filepath)
@@ -467,32 +438,57 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         )
 
     else:
-        print(f"Completed NS-Forest for unprocessed AnnData file: {h5ad_filename}")
+        print(f"Completed NS-Forest for preprocessed AnnData file: {pp_h5ad_filename}")
 
 
-def run_nsforest(dataset_filenames):
-    
-    for dataset_filename in dataset_filenames:
-        try:
-            run_nsforest_on_file(dataset_filename)
-        except Exception as ex:
-            print(
-                f"Could not run NS-Forest for unprocessed AnnData file: {dataset_filename}"
-            )
+def run_ontogpt(lung_datasets):
+
+    with Pool(8) as p:
+        p.map(run_ontogpt_pubmed_annotate, lung_datasets.citation_pmid)
+
+
+def run_ontogpt_pubmed_annotate(pmid):
+    """
+    run_ontogpt_pubmed_annotate("38540357")
+    """
+    if pmid is None:
+        return
+    output_filename = f"{pmid}.out"
+    output_filepath = f"{ONTOGPT_DIR}/{output_filename}"
+    if not os.path.exists(output_filepath):
+        print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
+
+        subprocess.run(
+            [
+                "ontogpt",
+                "pubmed-annotate",
+                "--template",
+                "cell_type",
+                pmid,
+                "--limit",
+                "1",
+                "--output",
+                output_filepath,
+            ],
+        )
+
+        print(f"Completed ontogpt pubmed-annotate for PMID: {pmid}")
+
+    else:
+        print(f"Ontogpt pubmed-annotate output for PMID: {pmid} exists")
 
 
 def main():
 
-    lung_obs, lung_datasets = get_lung_obs_and_datasets()
+    up_lung_obs, up_lung_datasets = get_lung_obs_and_datasets()
+    pp_lung_datasets = append_titles_pmids_and_dataset_h5ad_files(up_lung_datasets)
 
-    dataset_filenames = get_datasets(lung_datasets)
-    titles = get_titles(lung_datasets)
-    pmids = get_pmids(titles)
+    run_ontogpt(pp_lung_datasets)
+    run_nsforest(pp_lung_datasets)
 
-    run_ontogpt(pmids)
-    run_nsforest(dataset_filenames)
+    return up_lung_obs, pp_lung_datasets
 
 
 if __name__ == "__main__":
     __spec__ = None  # Workaround for Pool() in IPython
-    main()
+    up_lung_obs, pp_lung_datasets = main()
