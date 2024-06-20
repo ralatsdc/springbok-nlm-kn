@@ -32,6 +32,7 @@ CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
 CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
 
 NSFOREST_DIR = f"{DATA_DIR}/nsforest"
+TOTAL_COUNTS = 10000
 
 EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 EMAIL = "raymond.leclair@gmail.com"
@@ -419,6 +420,17 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         print(f"Loading unprocessed AnnData file: {h5ad_filename}")
         h5ad_filepath = f"{CELLXGENE_DIR}/{h5ad_filename}"
         up_adata = sc.read_h5ad(h5ad_filepath)
+
+        # TODO: Check validity of downsampling
+        print("Calculating QC metrics")
+        up_metrics = sc.pp.calculate_qc_metrics(up_adata)
+        if up_metrics[1]["total_counts"].sum() > TOTAL_COUNTS:
+            print("Downsampling unprocessed")
+            ds_adata = sc.pp.downsample_counts(
+                up_adata, total_counts=TOTAL_COUNTS, copy=True
+            )
+        else:
+            ds_adata = up_adata  # No need to copy
 
         print("Generating scanpy dendrogram")
         # Dendrogram order is stored in
