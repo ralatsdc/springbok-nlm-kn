@@ -470,13 +470,8 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         print(f"Completed NS-Forest for unprocessed AnnData file: {h5ad_filename}")
 
 
-def main():
-
-    lung_obs, lung_datasets = get_lung_obs_and_datasets()
-    titles = get_titles(lung_datasets)
-    pmids = get_pmids(titles)
-    run_ontogpt(pmids)
-    dataset_filenames = get_datasets(lung_datasets)
+def run_nsforest(dataset_filenames):
+    
     for dataset_filename in dataset_filenames:
         try:
             run_nsforest_on_file(dataset_filename)
@@ -484,6 +479,18 @@ def main():
             print(
                 f"Could not run NS-Forest for unprocessed AnnData file: {dataset_filename}"
             )
+
+
+def main():
+
+    lung_obs, lung_datasets = get_lung_obs_and_datasets()
+
+    dataset_filenames = get_datasets(lung_datasets)
+    titles = get_titles(lung_datasets)
+    pmids = get_pmids(titles)
+
+    run_ontogpt(pmids)
+    run_nsforest(dataset_filenames)
 
 
 if __name__ == "__main__":
