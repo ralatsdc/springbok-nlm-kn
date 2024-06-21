@@ -1,6 +1,7 @@
 import ast
 from glob import glob
 import json
+import logging
 import os
 import re
 import yaml
@@ -11,6 +12,7 @@ import pandas as pd
 
 ARANGO_URL = "http://localhost:8529"
 ARANGO_CLIENT = ArangoClient(hosts=ARANGO_URL)
+SYS_DB = ARANGO_CLIENT.db("_system", username="root", password="")
 
 DATA_DIR = "data"
 
@@ -32,12 +34,9 @@ GENE_COLLECTION = "gene"
 
 def create_or_get_database():
 
-    # Connect to "_system" database as root user.
-    sys_db = ARANGO_CLIENT.db("_system", username="root", password="")
-
     # Create NCBI-Cell database, if needed
-    if not sys_db.has_database(NCBI_CELL_DB):
-        sys_db.create_database(NCBI_CELL_DB)
+    if not SYS_DB.has_database(NCBI_CELL_DB):
+        SYS_DB.create_database(NCBI_CELL_DB)
 
     # Connect to NCBI-Cell database
     db = ARANGO_CLIENT.db(NCBI_CELL_DB, username="root", password="")
@@ -47,12 +46,9 @@ def create_or_get_database():
 
 def delete_database():
 
-    # Connect to "_system" database as root user.
-    sys_db = ARANGO_CLIENT.db("_system", username="root", password="")
-
     # Delete NCBI-Cell database, if needed
-    if sys_db.has_database(NCBI_CELL_DB):
-        sys_db.delete_database(NCBI_CELL_DB)
+    if SYS_DB.has_database(NCBI_CELL_DB):
+        SYS_DB.delete_database(NCBI_CELL_DB)
 
 
 def create_or_get_graph(db):
@@ -63,7 +59,7 @@ def create_or_get_graph(db):
     else:
         graph = db.create_graph(NCBI_CELL_GRAPH)
 
-    return graph
+    return graph, db
 
 
 def create_and_populate_or_get_vertex_collection_cellxgene(graph):
@@ -84,7 +80,7 @@ def create_and_populate_or_get_vertex_collection_cellxgene(graph):
         if not cellxgene.has(row["_key"]):
             cellxgene.insert(json.loads(row.to_json()))
 
-    return cellxgene
+    return cellxgene, graph
 
 
 def create_and_populate_or_get_vertex_collection_nsforest(graph):
@@ -95,7 +91,7 @@ def create_and_populate_or_get_vertex_collection_nsforest(graph):
     else:
         nsforest = graph.create_vertex_collection(NSFOREST_COLLECTION)
 
-    # Read each OntoGPT results file
+    # Read each NSForest results file
     for fn in glob(f"{NSFOREST_DIR}/*/*.csv"):
         df = pd.read_csv(fn)
 
@@ -109,7 +105,7 @@ def create_and_populate_or_get_vertex_collection_nsforest(graph):
             if not nsforest.has(row["_key"]):
                 nsforest.insert(json.loads(row.to_json()))
 
-    return nsforest
+    return nsforest, graph
 
 
 def create_and_populate_or_get_vertex_collection_ontogpt(graph):
@@ -136,7 +132,7 @@ def create_and_populate_or_get_vertex_collection_ontogpt(graph):
         if not ontogpt.has(d["_key"]):
             ontogpt.insert(d)
 
-    return ontogpt
+    return ontogpt, graph
 
 
 def create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt):
@@ -161,12 +157,19 @@ def create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt):
     for gpt in ontogpt.all():
         m = p.search(str(gpt))
         if m:
+            cell_id = m.group(1)
+            gpt["cell_id"] = cell_id
+
             d = {k: gpt[k] for k in ("id", "citation_pmid")}
-            d["_key"] = m.group(1)
+            d["_key"] = cell_id
             if not cell.has(d["_key"]):
                 cell.insert(d)
 
-    return cell
+        else:
+            gpt["cell_id"] = None
+        ontogpt.update(gpt)
+
+    return cell, graph, nsforest, ontogpt
 
 
 def create_and_populate_or_get_vertex_collection_gene(graph, nsforest):
@@ -186,41 +189,164 @@ def create_and_populate_or_get_vertex_collection_gene(graph, nsforest):
             if not gene.has(d["_key"]):
                 gene.insert(d)
 
-    return gene
+    return gene, graph, nsforest
 
 
-def abc(cellxgene, nsforest, ontogpt):
+def create_or_get_edge_collection_cellxgene_cell(graph):
+
+    if not graph.has_edge_definition(f"{CELLXGENE_COLLECTION}-{CELL_COLLECTION}"):
+        cellxgene_cell = graph.create_edge_definition(
+            edge_collection=f"{CELLXGENE_COLLECTION}-{CELL_COLLECTION}",
+            from_vertex_collections=[f"{CELLXGENE_COLLECTION}"],
+            to_vertex_collections=[f"{CELL_COLLECTION}"],
+        )
+    else:
+        cellxgene_cell = graph.edge_collection(
+            f"{CELLXGENE_COLLECTION}-{CELL_COLLECTION}"
+        )
+
+    return cellxgene_cell, graph
+
+
+def create_or_get_edge_collection_ontogpt_cell(graph):
+
+    if not graph.has_edge_definition(f"{ONTOGPT_COLLECTION}-{CELL_COLLECTION}"):
+        ontogpt_cell = graph.create_edge_definition(
+            edge_collection=f"{ONTOGPT_COLLECTION}-{CELL_COLLECTION}",
+            from_vertex_collections=[f"{ONTOGPT_COLLECTION}"],
+            to_vertex_collections=[f"{CELL_COLLECTION}"],
+        )
+    else:
+        ontogpt_cell = graph.edge_collection(f"{ONTOGPT_COLLECTION}-{CELL_COLLECTION}")
+
+    return ontogpt_cell, graph
+
+
+def create_or_get_edge_collection_cell_gene(graph):
+
+    if not graph.has_edge_definition(f"{CELL_COLLECTION}-{GENE_COLLECTION}"):
+        cell_gene = graph.create_edge_definition(
+            edge_collection=f"{CELL_COLLECTION}-{GENE_COLLECTION}",
+            from_vertex_collections=[f"{CELL_COLLECTION}"],
+            to_vertex_collections=[f"{GENE_COLLECTION}"],
+        )
+    else:
+        cell_gene = graph.edge_collection(f"{CELL_COLLECTION}-{GENE_COLLECTION}")
+
+    return cell_gene, graph
+
+
+def insert_cellxgene_cell_edges(cellxgene, cell, cellxgene_cell):
 
     for cxg in cellxgene.all():
+        cxg_key = cxg["_key"]
+        print(
+            f"Finding edges to {CELL_COLLECTION} from {CELLXGENE_COLLECTION} document with key: {cxg_key}"
+        )
 
-        for nsf in nsforest.all():
-            if nsf["dataset_id"] == cxg["dataset_id"]:
-                break
+        found = False
+        for cll in cell.all():
+            if "dataset_id" in cll and cll["dataset_id"] == cxg["dataset_id"]:
+                found = True
+                cll_key = cll["_key"]
+                doc = {
+                    "_key": f"{cxg_key}-{cll_key}",
+                    "_from": f"{CELLXGENE_COLLECTION}/{cxg_key}",
+                    "_to": f"{CELL_COLLECTION}/{cll_key}",
+                }
+                if not cellxgene_cell.has(doc):
+                    print(
+                        f"Inserting edge to {CELL_COLLECTION} document with key: {cll_key} from {CELLXGENE_COLLECTION} document with key: {cxg_key}"
+                    )
+                    cellxgene_cell.insert(doc)
 
-        for gpt in ontogpt.all():
-            if gpt["citation_pmid"] == cxg["citation_pmid"]:
-                break
+        if not found:
+            print(
+                f"No edges to {CELL_COLLECTION} from {CELLXGENE_COLLECTION} document with key: {cxg_key}"
+            )
 
-        break
+    return cellxgene, cell, cellxgene_cell
 
-    return
+
+def insert_ontogpt_cell_edges(ontogpt, cell, ontogpt_cell):
+
+    for gpt in ontogpt.all():
+        gpt_key = gpt["_key"]
+        print(
+            f"Finding edges to {CELL_COLLECTION} from {ONTOGPT_COLLECTION} document with key: {gpt_key}"
+        )
+
+        found = False
+        cll_key = gpt["cell_id"]
+        if cll_key is not None and cell.has(cll_key):
+            found = True
+
+            doc = {
+                "_key": f"{gpt_key}-{cll_key}",
+                "_from": f"{ONTOGPT_COLLECTION}/{gpt_key}",
+                "_to": f"{CELL_COLLECTION}/{cll_key}",
+            }
+            if not ontogpt_cell.has(doc):
+                print(
+                    f"Inserting edge to {CELL_COLLECTION} document with key: {cll_key} from {ONTOGPT_COLLECTION} document with key: {gpt_key}"
+                )
+                ontogpt_cell.insert(doc)
+
+        if not found:
+            print(
+                f"No edges to {CELL_COLLECTION} from {ONTOGPT_COLLECTION} document with key: {gpt_key}"
+            )
+
+    return ontogpt, cell, ontogpt_cell
+
+
+def insert_cell_gene_edges(nsforest, cell_gene):
+
+    for nsf in nsforest.all():
+        cll_key = nsf["clusterName"]
+
+        for gn_key in ast.literal_eval(nsf["NSForest_markers"]):
+            doc = {
+                "_key": f"{cll_key}-{gn_key}",
+                "_from": f"{CELL_COLLECTION}/{cll_key}",
+                "_to": f"{GENE_COLLECTION}/{gn_key}",
+            }
+            if not cell_gene.has(doc):
+                print(
+                    f"Inserting edge to {GENE_COLLECTION} document with key: {gn_key} from {CELL_COLLECTION} document with key: {cll_key}"
+                )
+                cell_gene.insert(doc)
+
+    return nsforest, cell_gene
 
 
 def main():
+    pass
+
+
+if __name__ == "__main__":
 
     delete_database()
     db = create_or_get_database()
 
-    graph = create_or_get_graph(db)
+    graph, db = create_or_get_graph(db)
 
-    cellxgene = create_and_populate_or_get_vertex_collection_cellxgene(graph)
-    nsforest = create_and_populate_or_get_vertex_collection_nsforest(graph)
-    ontogpt = create_and_populate_or_get_vertex_collection_ontogpt(graph)
-    cell = create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt)
-    gene = create_and_populate_or_get_vertex_collection_gene(graph, nsforest)
+    cellxgene, graph = create_and_populate_or_get_vertex_collection_cellxgene(graph)
+    nsforest, graph = create_and_populate_or_get_vertex_collection_nsforest(graph)
+    ontogpt, graph = create_and_populate_or_get_vertex_collection_ontogpt(graph)
+    cell, graph, nsforest, ontogpt = create_and_populate_or_get_vertex_collection_cell(
+        graph, nsforest, ontogpt
+    )
+    gene, graph, nsforest = create_and_populate_or_get_vertex_collection_gene(
+        graph, nsforest
+    )
 
-    return cellxgene, nsforest, ontogpt, cell, gene
+    cellxgene_cell, graph = create_or_get_edge_collection_cellxgene_cell(graph)
+    ontogpt_cell, graph = create_or_get_edge_collection_ontogpt_cell(graph)
+    cell_gene, graph = create_or_get_edge_collection_cell_gene(graph)
 
-
-if __name__ == "__main__":
-    cellxgene, nsforest, ontogpt, cell, gene = main()
+    cellxgene, cell, cellxgene_cell = insert_cellxgene_cell_edges(
+        cellxgene, cell, cellxgene_cell
+    )
+    ontogpt, cell, ontogpt_cell = insert_ontogpt_cell_edges(ontogpt, cell, ontogpt_cell)
+    nsforest, cell_gene = insert_cell_gene_edges(nsforest, cell_gene)
