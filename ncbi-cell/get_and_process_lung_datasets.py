@@ -31,7 +31,7 @@ CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
 CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
 
 NSFOREST_DIR = f"{DATA_DIR}/nsforest"
-TOTAL_COUNTS = 10000
+TOTAL_COUNTS = 5000
 
 EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
 EMAIL = "raymond.leclair@gmail.com"
@@ -356,7 +356,7 @@ def run_nsforest(lung_datasets):
             run_nsforest_on_file(dataset_h5ad_file)
         except Exception as ex:
             print(
-                f"Could not run NS-Forest for unprocessed AnnData file: {dataset_h5ad_file}"
+                f"Could not run NSForest for unprocessed AnnData file: {dataset_h5ad_file}"
             )
 
 
@@ -366,7 +366,7 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
     Notes:
 
     - Some datasets have multiple annotations per sample
-    (ex. "broad_cell_type" and "granular_cell_type"). NS-Forest can be
+    (ex. "broad_cell_type" and "granular_cell_type"). NSForest can be
     run on multiple `cluster_header`'s. Combining the parent and child
     markers may improve classification results.
 
@@ -428,7 +428,7 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         print(f"Saving preprocessed AnnData file: {pp_h5ad_filepath}")
         pp_adata.write_h5ad(pp_h5ad_filepath)
 
-        print(f"Running NS-Forest for preprocessed AnnData file: {pp_h5ad_filename}")
+        print(f"Running NSForest for preprocessed AnnData file: {pp_h5ad_filename}")
         results = nsforesting.NSForest(
             pp_adata,
             cluster_header,
@@ -437,7 +437,7 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
         )
 
     else:
-        print(f"Completed NS-Forest for preprocessed AnnData file: {pp_h5ad_filename}")
+        print(f"Completed NSForest for preprocessed AnnData file: {pp_h5ad_filename}")
 
 
 def run_ontogpt(lung_datasets):
@@ -483,7 +483,7 @@ def main():
     pp_lung_datasets = append_titles_pmids_and_dataset_h5ad_files(up_lung_datasets)
 
     run_ontogpt(pp_lung_datasets)
-    run_nsforest(pp_lung_datasets)
+    # run_nsforest(pp_lung_datasets)
 
     return up_lung_obs, pp_lung_datasets
 
