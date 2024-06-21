@@ -2,6 +2,7 @@ import ast
 from glob import glob
 import json
 import os
+import re
 import yaml
 
 from arango import ArangoClient
@@ -138,7 +139,7 @@ def create_and_populate_or_get_vertex_collection_ontogpt(graph):
     return ontogpt
 
 
-def create_and_populate_or_get_vertex_collection_cell(graph, nsforest):
+def create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt):
 
     # Create, or get the cell vertex collection
     if graph.has_vertex_collection(CELL_COLLECTION):
@@ -146,13 +147,24 @@ def create_and_populate_or_get_vertex_collection_cell(graph, nsforest):
     else:
         cell = graph.create_vertex_collection(CELL_COLLECTION)
 
-    # Subset each document, then insert it using its clusterName as
-    # _key
+    # Subset each nsforest document, then insert it using its
+    # clusterName as _key
     for nsf in nsforest.all():
         d = {k: nsf[k] for k in ("clusterName", "dataset_id")}
         d["_key"] = d["clusterName"]
         if not cell.has(d["_key"]):
             cell.insert(d)
+
+    # Search for cells in each ontogpt document, and if found, subset
+    # the document, then insert it using the first match
+    p = re.compile("'(CL:\d*)'")
+    for gpt in ontogpt.all():
+        m = p.search(str(gpt))
+        if m:
+            d = {k: gpt[k] for k in ("id", "citation_pmid")}
+            d["_key"] = m.group(1)
+            if not cell.has(d["_key"]):
+                cell.insert(d)
 
     return cell
 
@@ -204,7 +216,7 @@ def main():
     cellxgene = create_and_populate_or_get_vertex_collection_cellxgene(graph)
     nsforest = create_and_populate_or_get_vertex_collection_nsforest(graph)
     ontogpt = create_and_populate_or_get_vertex_collection_ontogpt(graph)
-    cell = create_and_populate_or_get_vertex_collection_cell(graph, nsforest)
+    cell = create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt)
     gene = create_and_populate_or_get_vertex_collection_gene(graph, nsforest)
 
     return cellxgene, nsforest, ontogpt, cell, gene
