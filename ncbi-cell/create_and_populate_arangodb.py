@@ -1,3 +1,4 @@
+import ast
 from glob import glob
 import json
 import os
@@ -64,7 +65,7 @@ def create_or_get_graph(db):
     return graph
 
 
-def create_or_get_and_populate_vertex_collection_cellxgene(graph):
+def create_and_populate_or_get_vertex_collection_cellxgene(graph):
 
     # Create or get the cellxgne vertex collection
     if graph.has_vertex_collection(CELLXGENE_COLLECTION):
@@ -85,7 +86,32 @@ def create_or_get_and_populate_vertex_collection_cellxgene(graph):
     return cellxgene
 
 
-def create_or_get_and_populate_vertex_collection_ontogpt(graph):
+def create_and_populate_or_get_vertex_collection_nsforest(graph):
+
+    # Create, or get the nsforest vertex collection
+    if graph.has_vertex_collection(NSFOREST_COLLECTION):
+        nsforest = graph.vertex_collection(NSFOREST_COLLECTION)
+    else:
+        nsforest = graph.create_vertex_collection(NSFOREST_COLLECTION)
+
+    # Read each OntoGPT results file
+    for fn in glob(f"{NSFOREST_DIR}/*/*.csv"):
+        df = pd.read_csv(fn)
+
+        # Append the dataset_id
+        dataset_id = os.path.basename(os.path.dirname(fn))
+        df["dataset_id"] = dataset_id
+
+        # Insert documents using clusterName as _key
+        df["_key"] = df["clusterName"]
+        for index, row in df.iterrows():
+            if not nsforest.has(row["_key"]):
+                nsforest.insert(json.loads(row.to_json()))
+
+    return nsforest
+
+
+def create_and_populate_or_get_vertex_collection_ontogpt(graph):
 
     # Create, or get the ontogpt vertex collection
     if graph.has_vertex_collection(ONTOGPT_COLLECTION):
@@ -112,41 +138,77 @@ def create_or_get_and_populate_vertex_collection_ontogpt(graph):
     return ontogpt
 
 
-def create_or_get_and_populate_vertex_collection_nsforest(graph):
+def create_and_populate_or_get_vertex_collection_cell(graph, nsforest):
 
-    # Create, or get the nsforest vertex collection
-    if graph.has_vertex_collection(NSFOREST_COLLECTION):
-        nsforest = graph.vertex_collection(NSFOREST_COLLECTION)
+    # Create, or get the cell vertex collection
+    if graph.has_vertex_collection(CELL_COLLECTION):
+        cell = graph.vertex_collection(CELL_COLLECTION)
     else:
-        nsforest = graph.create_vertex_collection(NSFOREST_COLLECTION)
+        cell = graph.create_vertex_collection(CELL_COLLECTION)
 
-    # Read each OntoGPT results file
-    for fn in glob(f"{NSFOREST_DIR}/*/*.csv"):
-        df = pd.read_csv(fn)
+    # Subset each document, then insert it using its clusterName as
+    # _key
+    for nsf in nsforest.all():
+        d = {k: nsf[k] for k in ("clusterName", "dataset_id")}
+        d["_key"] = d["clusterName"]
+        if not cell.has(d["_key"]):
+            cell.insert(d)
 
-        # Append the dataset_id
-        dataset_id = os.path.basename(os.path.dirname(fn))
-        df["dataset_id"] = dataset_id
+    return cell
 
-        # Insert documents using clusterName as _key
-        df["_key"] = df["clusterName"]
-        for index, row in df.iterrows():
-            if not nsforest.has(row["_key"]):
-                nsforest.insert(json.loads(row.to_json()))
 
-    return nsforest
+def create_and_populate_or_get_vertex_collection_gene(graph, nsforest):
+
+    # Create, or get the gene vertex collection
+    if graph.has_vertex_collection(GENE_COLLECTION):
+        gene = graph.vertex_collection(GENE_COLLECTION)
+    else:
+        gene = graph.create_vertex_collection(GENE_COLLECTION)
+
+    # Subset each document, then insert it using each of
+    # NSForest_markers as _key
+    for nsf in nsforest.all():
+        d = {k: nsf[k] for k in ("clusterName", "dataset_id")}
+        for mrk in ast.literal_eval(nsf["NSForest_markers"]):
+            d["_key"] = mrk
+            if not gene.has(d["_key"]):
+                gene.insert(d)
+
+    return gene
+
+
+def abc(cellxgene, nsforest, ontogpt):
+
+    for cxg in cellxgene.all():
+
+        for nsf in nsforest.all():
+            if nsf["dataset_id"] == cxg["dataset_id"]:
+                break
+
+        for gpt in ontogpt.all():
+            if gpt["citation_pmid"] == cxg["citation_pmid"]:
+                break
+
+        break
+
+    return
 
 
 def main():
+
     delete_database()
     db = create_or_get_database()
-    graph = create_or_get_graph(db)
-    cellxgene = create_or_get_and_populate_vertex_collection_cellxgene(graph)
-    ontogpt = create_or_get_and_populate_vertex_collection_ontogpt(graph)
-    nsforest = create_or_get_and_populate_vertex_collection_nsforest(graph)
 
-    return cellxgene, ontogpt, nsforest
+    graph = create_or_get_graph(db)
+
+    cellxgene = create_and_populate_or_get_vertex_collection_cellxgene(graph)
+    nsforest = create_and_populate_or_get_vertex_collection_nsforest(graph)
+    ontogpt = create_and_populate_or_get_vertex_collection_ontogpt(graph)
+    cell = create_and_populate_or_get_vertex_collection_cell(graph, nsforest)
+    gene = create_and_populate_or_get_vertex_collection_gene(graph, nsforest)
+
+    return cellxgene, nsforest, ontogpt, cell, gene
 
 
 if __name__ == "__main__":
-    cellxgene, ontogpt, nsforest = main()
+    cellxgene, nsforest, ontogpt, cell, gene = main()
