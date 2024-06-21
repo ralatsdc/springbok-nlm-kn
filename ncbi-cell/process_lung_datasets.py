@@ -116,9 +116,8 @@ def append_titles_pmids_and_dataset_h5ad_files(lung_datasets):
 def append_titles(lung_datasets):
 
     print("Getting titles")
-    citations = [c for c in lung_datasets.citation]
     with Pool(8) as p:
-        titles = p.map(get_title, citations)
+        titles = p.map(get_title, lung_datasets["citation"])
 
     lung_datasets["citation_title"] = titles
 
@@ -129,7 +128,7 @@ def append_pmids(lung_datasets):
 
     print("Getting PMIDs")
     with Pool(8) as p:
-        pmids = p.map(get_pmid_for_title, lung_datasets.citation_title)
+        pmids = p.map(get_pmid_for_title, lung_datasets["citation_title"])
 
     lung_datasets["citation_pmid"] = pmids
 
@@ -352,7 +351,7 @@ def get_and_download_dataset_h5ad_file(dataset_series):
 
 def run_nsforest(lung_datasets):
 
-    for dataset_h5ad_file in lung_datasets.dataset_h5ad_file:
+    for dataset_h5ad_file in lung_datasets["dataset_h5ad_file"]:
         try:
             run_nsforest_on_file(dataset_h5ad_file)
         except Exception as ex:
@@ -444,7 +443,7 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
 def run_ontogpt(lung_datasets):
 
     with Pool(8) as p:
-        p.map(run_ontogpt_pubmed_annotate, lung_datasets.citation_pmid)
+        p.map(run_ontogpt_pubmed_annotate, lung_datasets["citation_pmid"])
 
 
 def run_ontogpt_pubmed_annotate(pmid):
