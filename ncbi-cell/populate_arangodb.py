@@ -98,6 +98,10 @@ def create_or_get_and_populate_vertex_collection_ontogpt(graph):
         with open(fn, "r") as f:
             y = yaml.safe_load(f)
 
+        # Append the PMID
+        pmid = os.path.basename(os.path.dirname(fn))
+        y["extracted_object"]["pmid"] = pmid
+
         # Use the extracted_object dictionary as the document, then
         # insert it using its id as _key
         d = y["extracted_object"]

@@ -1,3 +1,4 @@
+.DS_Store
 .ipynb_checkpoints
 .openai_cache.db
 .venv
@@ -9,3 +10,4 @@
 *.parquet
 *.pickle
 __pycache__
+arangodb/
