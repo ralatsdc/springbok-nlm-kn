@@ -18,12 +18,12 @@ SYS_DB = ARANGO_CLIENT.db("_system", username="root", password="")
 DATA_DIR = "data"
 
 NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
-NCBI_CELL_DB = "ncbi-cell"
+NCBI_CELL_DB = "ncbi-cell-2024-06-27"
 NCBI_CELL_GRAPH = "ncbi-cell"
 
 CELLXGENE_COLLECTION = "cellxgene"
 
-NSFOREST_DIR = f"{DATA_DIR}/nsforest"
+NSFOREST_DIR = f"{DATA_DIR}/nsforest-2024-06-27"
 NSFOREST_COLLECTION = "nsforest"
 
 ONTOGPT_DIR = f"{DATA_DIR}/ontogpt"
