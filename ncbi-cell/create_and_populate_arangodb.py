@@ -1,5 +1,6 @@
 import ast
 from glob import glob
+from io import StringIO
 import json
 import logging
 import os
@@ -226,6 +227,46 @@ def create_and_populate_or_get_vertex_collection_ontogpt(graph):
     return ontogpt, graph
 
 
+def dataframe_to_doc(df, _key):
+    """Convert a Pandas DataFrame to an ArangoDB document using the
+    specified _key.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Pandas DataFrame
+
+    Returns
+    -------
+    doc : dict
+        ArangoDB document with key needed by ArangoDB
+    """
+    doc = json.loads(df.to_json())
+    doc["_key"] = _key
+    return doc
+
+
+def doc_to_dataframe(doc):
+    """Convert ArangoDB document to Pandas DataFrame.
+
+    Parameters
+    ----------
+    doc : dict
+        ArangoDB document
+
+    Returns
+    -------
+    df : pd.DataFrame
+        ArangoDB document without keys added by ArangoDB as Pandas
+        DataFrame
+    """
+    for key in ["_key", "_id", "_rev"]:
+        if key in doc:
+            doc.pop(key)
+    df = pd.read_json(StringIO(json.dumps(doc)))
+    return df
+
+
 def create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt):
     """Create or get the cell vertex collection, and insert a vertex
     corresponding to each cell identified in the nsforest and ontogpt
@@ -257,23 +298,39 @@ def create_and_populate_or_get_vertex_collection_cell(graph, nsforest, ontogpt):
     else:
         cell = graph.create_vertex_collection(CELL_COLLECTION)
 
-    # Subset each nsforest document, then insert it using its
-    # clusterName as _key
+    # Read each nsforest vertex JSON to create a DataFrame
     for nsf in nsforest.all():
-        d = {k: nsf[k] for k in ("clusterName", "dataset_id")}
-        d["_key"] = d["clusterName"]
-        if not cell.has(d["_key"]):
-            cell.insert(d)
+        df = doc_to_dataframe(nsf)
 
-    # Search for cells in each ontogpt document, and if found, subset
-    # the document, then insert it using the first match
+        # Consider each row of the DataFrame
+        for index, row in df.iterrows():
+            _key = row["clusterName"].replace(" ", "-").replace(",", ":")
+
+            # Insert or update a cell vertex using the row clusterName
+            # as key, collecting all dataset_ids corresponding to the
+            # cell vertex
+            if not cell.has(_key):
+                d = {
+                    "_key": _key,
+                    "clusterName": row["clusterName"],
+                    "dataset_ids": [row["dataset_id"]],
+                }
+                cell.insert(d)
+
+            else:
+                d = cell.get(_key)
+                d["dataset_ids"].append(row["dataset_id"])
+                cell.update(d)
+
+    # Search for cell ontology identifiers in each ontogpt document,
+    # and if found, subset the document, then insert it using the
+    # first match
     p = re.compile("'(CL:\d*)'")
     for gpt in ontogpt.all():
         m = p.search(str(gpt))
         if m:
             cell_id = m.group(1)
             gpt["cell_id"] = cell_id
-
             d = {k: gpt[k] for k in ("id", "citation_pmid")}
             d["_key"] = cell_id
             if not cell.has(d["_key"]):
@@ -454,7 +511,7 @@ def insert_cellxgene_cell_edges(cellxgene, cell, cellxgene_cell):
     """
     # Consider each cellxgene vertex
     for cxg in cellxgene.all():
-        cxg_key = cxg["_key"]
+        cxg_key = cxg["_key"]  # collection_id
         print(
             f"Finding edges to {CELL_COLLECTION} from {CELLXGENE_COLLECTION} document with key: {cxg_key}"
         )
@@ -462,9 +519,12 @@ def insert_cellxgene_cell_edges(cellxgene, cell, cellxgene_cell):
         # Consider each cell vertex
         found = False
         for cll in cell.all():
-            if "dataset_id" in cll and cll["dataset_id"] == cxg["dataset_id"]:
+
+            # Insert an edge from the cellxgene vertex to the cell
+            # vertex if they share their dataset_id
+            if "dataset_ids" in cll and cxg["dataset_id"] in cll["dataset_ids"]:
                 found = True
-                cll_key = cll["_key"]
+                cll_key = cll["_key"]  # clusterName with replacements
                 doc = {
                     "_key": f"{cxg_key}-{cll_key}",
                     "_from": f"{CELLXGENE_COLLECTION}/{cxg_key}",
@@ -509,16 +569,16 @@ def insert_ontogpt_cell_edges(ontogpt, cell, ontogpt_cell):
     """
     # Consider each ontogpt vertex
     for gpt in ontogpt.all():
-        gpt_key = gpt["_key"]
+        gpt_key = gpt["_key"]  # id
         print(
             f"Finding edges to {CELL_COLLECTION} from {ONTOGPT_COLLECTION} document with key: {gpt_key}"
         )
 
-        found = False
-        cll_key = gpt["cell_id"]
+        # Insert an edge from an ontogpt vertex to a cell vertex if
+        # the ontogpt vertex cell_id is the cell key. Currently, this
+        # cannot happen.
+        cll_key = gpt["cell_id"]  # cell ontology identifier
         if cll_key is not None and cell.has(cll_key):
-            found = True
-
             doc = {
                 "_key": f"{gpt_key}-{cll_key}",
                 "_from": f"{ONTOGPT_COLLECTION}/{gpt_key}",
@@ -530,7 +590,7 @@ def insert_ontogpt_cell_edges(ontogpt, cell, ontogpt_cell):
                 )
                 ontogpt_cell.insert(doc)
 
-        if not found:
+        else:
             print(
                 f"No edges to {CELL_COLLECTION} from {ONTOGPT_COLLECTION} document with key: {gpt_key}"
             )
@@ -558,19 +618,29 @@ def insert_cell_gene_edges(nsforest, cell_gene):
     """
     # Read each nsforest vertex JSON to create a DataFrame
     for nsf in nsforest.all():
-        cll_key = nsf["clusterName"]
+        df = doc_to_dataframe(nsf)
 
-        for gn_key in ast.literal_eval(nsf["NSForest_markers"]):
-            doc = {
-                "_key": f"{cll_key}-{gn_key}",
-                "_from": f"{CELL_COLLECTION}/{cll_key}",
-                "_to": f"{GENE_COLLECTION}/{gn_key}",
-            }
-            if not cell_gene.has(doc):
-                print(
-                    f"Inserting edge to {GENE_COLLECTION} document with key: {gn_key} from {CELL_COLLECTION} document with key: {cll_key}"
-                )
-                cell_gene.insert(doc)
+        # Consider each row of the DataFrame which corresponds to a
+        # cell vertex
+        for index, row in df.iterrows():
+            cll_key = row["clusterName"].replace(" ", "-").replace(",", ":")
+
+            # Consider each marker in the row which corresponds to a
+            # gene vertex
+            for gn_key in ast.literal_eval(row["NSForest_markers"]):
+
+                # Insert an edge from the cell vertex to the gene
+                # vertex, if needed
+                doc = {
+                    "_key": f"{cll_key}-{gn_key}",
+                    "_from": f"{CELL_COLLECTION}/{cll_key}",
+                    "_to": f"{GENE_COLLECTION}/{gn_key}",
+                }
+                if not cell_gene.has(doc):
+                    print(
+                        f"Inserting edge to {GENE_COLLECTION} document with key: {gn_key} from {CELL_COLLECTION} document with key: {cll_key}"
+                    )
+                    cell_gene.insert(doc)
 
     return nsforest, cell_gene
 
