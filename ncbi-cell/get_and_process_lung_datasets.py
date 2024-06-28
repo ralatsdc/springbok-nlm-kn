@@ -1,14 +1,6 @@
-# See:
-#     https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html
-#     http://localhost:8889/notebooks/python_raw/get_dataset.ipynb
-#     https://nsforest.readthedocs.io/en/latest/tutorial.html
-#     https://scanpy.readthedocs.io/en/latest/generated/scanpy.pp.calculate_qc_metrics.html
-#     https://scanpy.readthedocs.io/en/stable/generated/scanpy.pp.downsample_counts.html
-
-# TODO: Use pathlib
 import logging
 from multiprocessing.pool import Pool
-import os
+import os  # TODO: Use pathlib?
 import re
 import requests
 import subprocess
@@ -30,11 +22,13 @@ CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
 CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
 CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
 
-NSFOREST_DIR = f"{DATA_DIR}/nsforest"
-TOTAL_COUNTS = 5000
+HTTPS_SLEEP = 1
+
+NSFOREST_DIR = f"{DATA_DIR}/nsforest-2024-06-27"
+TOTAL_COUNTS = 5000  # TODO: Select a more sensible value
 
 EUTILS_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/"
-EMAIL = "raymond.leclair@gmail.com"
+NCBI_EMAIL = os.environ.get("NCBI_EMAIL")
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY")
 NCBI_API_SLEEP = 1
 PUBMED = "pubmed"
@@ -46,14 +40,27 @@ NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
 
 
 def get_lung_obs_and_datasets():
+    """Use the CELLXGENE Census to obtain all unprocessed human lung
+    cell metadata and datasets, then write the resulting Pandas
+    DataFrames to parquet files, or, if the files exist, read them.
 
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    lung_obs : pd.DataFrame
+        DataFrame containing unprocessed dataset metadata
+    lung_datasets : pd.DataFrame
+        DataFrame containing unprocessed dataset descriptions
+    """
+    # Create and write, or read DataFrames
     lung_obs_parquet = f"{NCBI_CELL_DIR}/up_lung_obs.parquet"
     lung_datasets_parquet = f"{NCBI_CELL_DIR}/up_lung_datasets.parquet"
-
     if not os.path.exists(lung_obs_parquet) or not os.path.exists(
         lung_datasets_parquet
     ):
-
         print("Opening soma")
         census = cellxgene_census.open_soma(census_version="latest")
 
@@ -70,6 +77,7 @@ def get_lung_obs_and_datasets():
             .to_pandas()
         )
 
+        print("Closing soma")
         census.close()
 
         print("Writing unprocessed lung obs parquet")
@@ -92,68 +100,134 @@ def get_lung_obs_and_datasets():
     return lung_obs, lung_datasets
 
 
-def append_titles_pmids_and_dataset_h5ad_files(lung_datasets):
+def append_titles_pmids_and_dataset_h5ad_files(up_lung_datasets):
+    """Append titles and PubMed identifiers (PMIDs) corresponding to
+    the dataset, and the dataset filename to the CELLXGENE dataset
+    DataFrame, download the dataset file, and write the preprocessed
+    DataFrame to a parquet file, or, if the file exists, read it.
 
-    lung_datasets_parquet = f"{NCBI_CELL_DIR}/pp_lung_datasets.parquet"
+    Parameters
+    ----------
+    up_lung_datasets : pd.DataFrame
+        DataFrame containing unprocessed dataset descriptions
 
-    if not os.path.exists(lung_datasets_parquet):
+    Returns
+    -------
+    pp_lung_datasets : pd.DataFrame
+        DataFrame containing preprocessed dataset descriptions
+    """
+    pp_lung_datasets_parquet = f"{NCBI_CELL_DIR}/pp_lung_datasets.parquet"
+    if not os.path.exists(pp_lung_datasets_parquet):
 
-        lung_datasets = append_titles(lung_datasets.copy())
-        lung_datasets = append_pmids(lung_datasets)
-        lung_datasets = append_and_download_dataset_h5ad_files(lung_datasets)
+        pp_lung_datasets = up_lung_datasets.copy()
+        pp_lung_datasets = append_titles(pp_lung_datasets)
+        pp_lung_datasets = append_pmids(pp_lung_datasets)
+        pp_lung_datasets = append_and_download_dataset_h5ad_files(pp_lung_datasets)
 
         print("Writing preprocessed lung datasets parquet")
-        lung_datasets.to_parquet(lung_datasets_parquet)
+        pp_lung_datasets.to_parquet(pp_lung_datasets_parquet)
 
     else:
 
         print("Reading preprocessed lung datasets parquet")
-        lung_datasets = pd.read_parquet(lung_datasets_parquet)
+        pp_lung_datasets = pd.read_parquet(pp_lung_datasets_parquet)
 
-    return lung_datasets
+    return pp_lung_datasets
 
 
 def append_titles(lung_datasets):
+    """Get and append titles for each dataset citation using a
+    subprocess pool.
 
+    Parameters
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions
+
+    Returns
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions with titles appended
+    """
     print("Getting titles")
     with Pool(8) as p:
         titles = p.map(get_title, lung_datasets["citation"])
-
     lung_datasets["citation_title"] = titles
 
     return lung_datasets
 
 
 def append_pmids(lung_datasets):
+    """Get and append PMIDs for each citation title using a subprocess
+    pool.
 
+    Parameters
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions with titles appended
+
+    Returns
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions with titles and
+        PMIDs appended
+    """
     print("Getting PMIDs")
     with Pool(8) as p:
         pmids = p.map(get_pmid_for_title, lung_datasets["citation_title"])
-
     lung_datasets["citation_pmid"] = pmids
 
     return lung_datasets
 
 
 def append_and_download_dataset_h5ad_files(lung_datasets):
+    """Get and append dataset filenames for each dataset using a
+    subprocess pool.
 
+    Parameters
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions
+
+    Returns
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions with dataset
+        filenames appended
+    """
     datasets_series = [row for index, row in lung_datasets.iterrows()]
+    print("Getting dataset files")
     with Pool(8) as p:
         dataset_h5ad_files = p.map(get_and_download_dataset_h5ad_file, datasets_series)
-
     lung_datasets["dataset_h5ad_file"] = dataset_h5ad_files
 
     return lung_datasets
 
 
 def get_title(citation):
+    """Get the title given a dataset citation. Note that only wget
+    succeeded for Cell Press journals, and neither requests nor wget
+    succeeded for The EMBO Journal and Science.
 
-    citation_url = None
+    Parameters
+    ----------
+    citation : str
+        Dataset citation
+
+    Returns
+    -------
+    title : str
+        Title of publication associated with the dataset
+    """
+    # Need a default return value
     title = None
 
+    # Compile patterns for finding the publication URL and article
+    # title
     p1 = re.compile("Publication: (.*) Dataset Version:")
     p2 = re.compile("articleName : '(.*)',")
 
+    # Assign CSS selectors for selecting article title elements
     selectors = [
         "h1.c-article-title",
         "h1.article-header__title.smaller",
@@ -162,25 +236,29 @@ def get_title(citation):
         "h1#page-title.highwire-cite-title",
     ]
 
+    # Find the publication URL
     m1 = p1.search(citation)
     if not m1:
         logging.warning(f"Could not find citation URL for {citation}")
-        return citation_url, title
-
+        return
     citation_url = m1.group(1)
-
     print(f"Getting title for citation URL: {citation_url}")
 
+    # Attempt to get the publication page using requests
+    print(f"Trying requests")
+    sleep(HTTPS_SLEEP)
     response = requests.get(citation_url)
-
     try_wget = True
     if response.status_code == 200:
         html_data = response.text
 
+        # Got the page, so parse it, and try each selector
         fullsoup = BeautifulSoup(html_data, features="lxml")
         for selector in selectors:
             selected = fullsoup.select(selector)
             if selected:
+
+                # Selected the article title, so assign it
                 if len(selected) > 1:
                     logging.warning(
                         f"Selected more than one element using {selector} on soup from {citation_url}"
@@ -191,13 +269,16 @@ def get_title(citation):
 
     if try_wget:
 
+        # Attempt to get the publication page using wget
+        print(f"Trying wget")
+        sleep(HTTPS_SLEEP)
         completed_process = subprocess.run(
             ["curl", "-L", citation_url], capture_output=True
         )
-
         html_data = completed_process.stdout
-        fullsoup = BeautifulSoup(html_data, features="lxml")
 
+        # Got the page, so parse it, and search for the title
+        fullsoup = BeautifulSoup(html_data, features="lxml")
         found = fullsoup.find_all("script")
         if found and len(found) > 4:
             m2 = p2.search(found[4].text)
@@ -210,52 +291,57 @@ def get_title(citation):
 
 
 def get_pmid_for_title(title):
+    """Search PubMed using a title to find the corresponding PMID.
 
-    print(f"Getting PMID for title: '{title}'")
+    Parameters
+    ----------
+    title : str
+       The title to use in the search
 
+    Returns
+    -------
+    pmid : str
+       The PubMed identifier found
+    """
+    # Need a default return value
     pmid = None
 
+    # Search PubMed
     if title is None:
-        return pmid
-
+        return
+    print(f"Getting PMID for title: '{title}'")
     search_url = EUTILS_URL + "esearch.fcgi"
-
     params = {
         "db": PUBMED,
         "term": title,
         "field": "title",
         "retmode": "json",
         # "retmax": 0,
-        "email": EMAIL,
+        "email": NCBI_EMAIL,
         "api_key": NCBI_API_KEY,
     }
-
     sleep(NCBI_API_SLEEP)
-
     response = requests.get(search_url, params=parse.urlencode(params, safe=","))
-
     if response.status_code == 200:
         data = response.json()
-
         resultcount = int(data["esearchresult"]["count"])
+
         if resultcount > 1:
+            # Response contains more than once result, so fetch each
+            # PMID until title matches
             logging.warning(f"PubMed returned more than one result for title: {title}")
             for _pmid in data["esearchresult"]["idlist"]:
                 _title = get_title_for_pmid(_pmid)
                 if (
                     _title == title + "."
-                ):  # PubMedCentral includes period in title, PubMed does not
+                ):  # PMID fetch includes period in title, title search does not
                     pmid = _pmid
-                    print(f"Found PMID: {pmid} for title: '{title}'")
                     break
-
-            if not pmid:
-                pmid = data["esearchresult"]["idlist"][0]
-                print(f"Using first PMID: {pmid} for title '{title}'")
 
         else:
             pmid = data["esearchresult"]["idlist"][0]
-            print(f"Found PMID: {pmid} for title: '{title}'")
+
+        print(f"Found PMID: {pmid} for title: '{title}'")
 
     elif response.status_code == 429:
         logging.error("Too many requests to NCBI API. Try again later, or use API key.")
@@ -267,26 +353,36 @@ def get_pmid_for_title(title):
 
 
 def get_title_for_pmid(pmid):
+    """Fetch from PubMed using a PMID to find the corresponding title.
 
+    Parameters
+    ----------
+    pmid : str
+       The PubMed identifier to use in the fetch
+
+    Returns
+    -------
+    title : str
+       The title fetched
+    """
+    # Need a default return value
     title = None
 
+    # Fetch from PubMed
     fetch_url = EUTILS_URL + "efetch.fcgi"
-
     params = {
         "db": PUBMED,
         "id": pmid,
         "rettype": "xml",
-        "email": EMAIL,
+        "email": NCBI_EMAIL,
         "api_key": NCBI_API_KEY,
     }
-
     sleep(NCBI_API_SLEEP)
-
     response = requests.get(fetch_url, params=parse.urlencode(params, safe=","))
-
     if response.status_code == 200:
         xml_data = response.text
 
+        # Got the page, so parse it, and search for the title
         fullsoup = BeautifulSoup(xml_data, "xml")
         found = fullsoup.find("ArticleTitle")
         if found:
@@ -301,15 +397,28 @@ def get_title_for_pmid(pmid):
 
 
 def get_and_download_dataset_h5ad_file(dataset_series):
+    """Get the dataset filename and download the dataset file.
 
+    Parameters
+    ----------
+    dataset_series : pd.Series
+        A row from the dataset DataFrame
+
+    Returns
+    -------
+    dataset : str
+       The dataset filename
+    """
+    # Need a default return value
+    dataset_filename = None
+
+    # Get the dataset object
     collection_id = dataset_series.collection_id
     dataset_id = dataset_series.dataset_id
-
     dataset_url = f"{CELLXGENE_API_URL_BASE}/curation/v1/collections/{collection_id}/datasets/{dataset_id}"
-
+    sleep(HTTPS_SLEEP)
     response = requests.get(dataset_url)
     response.raise_for_status()
-
     if response.status_code != 200:
         logging.error(f"Could not get dataset for id {dataset_id}")
         return
@@ -321,50 +430,70 @@ def get_and_download_dataset_h5ad_file(dataset_series):
         )
         return
 
+    # Find H5AD files, if possible
     assets = data["assets"]
     for asset in assets:
-
         if asset["filetype"] != "H5AD":
             continue
 
+        # Found an H5AD file, so download it, if needed
         dataset_filename = f"{dataset_id}.{asset['filetype']}"
         dataset_filepath = f"{CELLXGENE_DIR}/{dataset_filename}"
         if not os.path.exists(dataset_filepath):
-
             print(f"Downloading dataset file: {dataset_filepath}")
-
             with requests.get(asset["url"], stream=True) as response:
                 response.raise_for_status()
-
                 with open(dataset_filepath, "wb") as df:
                     for chunk in response.iter_content(chunk_size=1024 * 1024):
                         df.write(chunk)
-
             print(f"Dataset file: {dataset_filepath} downloaded")
 
         else:
-
             print(f"Dataset file: {dataset_filepath} exists")
 
     return dataset_filename
 
 
 def run_nsforest(lung_datasets):
+    """Run NSForest for each dataset file.
 
+    Parameters
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions with dataset
+        filenames appended
+
+    Returns
+    -------
+    None
+    """
+    # Run NSForest for each dataset file
     for dataset_h5ad_file in lung_datasets["dataset_h5ad_file"]:
         try:
             run_nsforest_on_file(dataset_h5ad_file)
         except Exception as ex:
             print(
-                f"Could not run NSForest for unprocessed AnnData file: {dataset_h5ad_file}"
+                f"Could not run NSForest for unprocessed AnnData file: {dataset_h5ad_file}: {ex}"
             )
 
 
-# TODO: Check validity of cluster_header default value
-def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_id"):
-    """
-    Notes:
+def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type"):
+    """Run NSForest using the specified dataset filename, and
+    cluster_header.
 
+    Parameters
+    ----------
+    h5ad_filename : str
+       The dataset filename
+    cluster_header : str
+       The cluster header
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
     - Some datasets have multiple annotations per sample
     (ex. "broad_cell_type" and "granular_cell_type"). NSForest can be
     run on multiple `cluster_header`'s. Combining the parent and child
@@ -382,12 +511,14 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
     order. This step can still be run with no effects, but the runtime
     may increase.
     """
-    # Assign results directory
+    # Assign results filename and directory
     pp_h5ad_filename = f"pp_{h5ad_filename}"
     results_dirname = h5ad_filename.split(".")[0]
     results_dirpath = f"{NSFOREST_DIR}/{results_dirname}"
+
+    # Run NSForest if results do not exist
     if not os.path.exists(results_dirpath):
-        os.mkdir(results_dirpath)
+        os.makedirs(results_dirpath)
 
         print(f"Loading unprocessed AnnData file: {h5ad_filename}")
         h5ad_filepath = f"{CELLXGENE_DIR}/{h5ad_filename}"
@@ -441,22 +572,43 @@ def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type_ontology_term_
 
 
 def run_ontogpt(lung_datasets):
+    """Run the OntoGPT pubmed-annotate function for each PMID
+    associated with a dataset.
 
+    Parameters
+    ----------
+    lung_datasets : pd.DataFrame
+        DataFrame containing dataset descriptions with PMIDs appended
+
+    Returns
+    -------
+    None
+    """
+    print("Running OntoGPT")
     with Pool(8) as p:
         p.map(run_ontogpt_pubmed_annotate, lung_datasets["citation_pmid"])
 
 
 def run_ontogpt_pubmed_annotate(pmid):
+    """Run the OntoGPT pubmed-annotate function for the specified PMID
+    associated with a dataset.
+
+    Parameters
+    ----------
+    pmid : str
+       The PubMed identifier found
+
+    Returns
+    -------
+    None
     """
-    run_ontogpt_pubmed_annotate("38540357")
-    """
+    # Run OntoGPT pubmed-annotate function, if needed
     if pmid is None:
         return
     output_filename = f"{pmid}.out"
     output_filepath = f"{ONTOGPT_DIR}/{output_filename}"
     if not os.path.exists(output_filepath):
         print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
-
         subprocess.run(
             [
                 "ontogpt",
@@ -483,7 +635,7 @@ def main():
     pp_lung_datasets = append_titles_pmids_and_dataset_h5ad_files(up_lung_datasets)
 
     run_ontogpt(pp_lung_datasets)
-    # run_nsforest(pp_lung_datasets)
+    run_nsforest(pp_lung_datasets)
 
     return up_lung_obs, pp_lung_datasets
 
