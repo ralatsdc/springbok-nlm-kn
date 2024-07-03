@@ -1,0 +1,221 @@
+#+title: Chapter 01: Use of CELLxGENE
+#+author: Ray LeClair
+#+date: <2024-07-01 Mon>
+
+* Objectives
+
+Since CELLxGENE serves as an initiating data source for the NCBI Cell
+pilot, the objectives of this document include demonstration of:
+
++ Identification of CELLxGENE datasets for a particular organism, and
+  tissue
+
++ Identification of CELLxGENE citation publications within PubMed
+
+** Background
+
+All single-cell RNA data from CZ CELLxGENE Discover is accessed,
+queried, and analyzed using the [[https://chanzuckerberg.github.io/cellxgene-census/][CELLxGENE Discover Census]].  Using
+cell-based slicing and querying one can:
+
++ Interact with the data through TileDB-SOMA
+  
++ Get slices in AnnData, Seurat, or SingleCellExperiment objects
+
+The following sections draw from CZ CELLxGENE tutorials which
+demonstrate how to use the Census to:
+
++ [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html][Explore and query the Census in the context of a single tissue, lung]]
+
++ [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/api_demo/census_query_extract.html][Query the expression data and cell/gene metadata from the Census,
+  and load them into common in-memory Python objects]]
+
++ [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/api_demo/census_citation_generation.html][Generate a citation string for all datasets contained in a Census
+  slice]]
+
+** Development environment
+
+See [[file:Introduction.ipynb][Introduction.ipynb)]].
+
+*** Jupyter Notebook
+
+Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
+sourced, and the virtual environment has been activated.
+
+*** Emacs Org Mode
+
+Evaluate this code block to define environment variables:
+
+#+begin_src zsh :session shared :results silent
+  source .zshenv
+#+end_src
+
+Evaluate this code block to activate the virtual environment:
+
+#+BEGIN_SRC emacs-lisp :session shared :results silent
+  (pyvenv-activate "../../.venv")
+#+END_SRC
+
+* Identification of CELLxGENE datasets for human, lung cells
+
+Following the first tutorial, but anticipating a time consuming
+process, the first call of this function obtains all human lung cell
+metadata and datasets from the CZ CELLxGENE Census, and writes the
+resulting Pandas DataFrames to a ~.parquet~ file. On subsequent calls,
+this function reads the ~.parquet~ files. In both cases, the resulting
+DataFrames are returned.
+
+To begin, import modules, and assign module scope variables:
+
+#+begin_src jupyter-python :session shared :results silent
+  import os
+
+  import pandas as pd
+
+  DATA_DIR = "../data"
+
+  NCBI_EMAIL = os.environ.get("NCBI_EMAIL")
+  NCBI_API_KEY = os.environ.get("NCBI_API_KEY")
+  NCBI_API_SLEEP = 1
+
+  NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
+
+#+end_src
+
+Then define the function that does the work:
+
+#+begin_src jupyter-python :session shared :results silent
+  def get_lung_obs_and_datasets():
+      """Use the CZ CELLxGENE Census to obtain all unprocessed human
+      lung cell metadata and datasets, then write the resulting Pandas
+      DataFrames to parquet files, or, if the files exist, read them.
+
+      Parameters
+      ----------
+      None
+
+      Returns
+      -------
+      lung_obs : pd.DataFrame
+          DataFrame containing unprocessed dataset metadata
+      lung_datasets : pd.DataFrame
+          DataFrame containing unprocessed dataset descriptions
+      """
+      # Create and write, or read DataFrames
+      lung_obs_parquet = f"{NCBI_CELL_DIR}/up_lung_obs.parquet"
+      lung_datasets_parquet = f"{NCBI_CELL_DIR}/up_lung_datasets.parquet"
+      if not os.path.exists(lung_obs_parquet) or not os.path.exists(
+               lung_datasets_parquet
+      ):
+          print("Opening soma")
+          census = cellxgene_census.open_soma(census_version="latest")
+
+          print("Collecting all datasets")
+          datasets = census["census_info"]["datasets"].read().concat().to_pandas()
+
+          print("Collecting lung obs")
+          lung_obs = (
+              census["census_data"]["homo_sapiens"]
+              .obs.read(
+                  value_filter="tissue_general == 'lung' and is_primary_data == True"
+              )
+              .concat()
+              .to_pandas()
+          )
+
+          print("Closing soma")
+          census.close()
+
+          print("Writing unprocessed lung obs parquet")
+          lung_obs.to_parquet(lung_obs_parquet)
+
+          print("Finding unprocessed lung datasets")
+          lung_datasets = datasets[datasets["dataset_id"].isin(lung_obs["dataset_id"])]
+
+          print("Writing unprocessed lung datasets parquet")
+          lung_datasets.to_parquet(lung_datasets_parquet)
+
+      else:
+
+          print("Reading unprocessed lung obs parquet")
+          lung_obs = pd.read_parquet(lung_obs_parquet)
+
+          print("Reading unprocessed lung datasets parquet")
+          lung_datasets = pd.read_parquet(lung_datasets_parquet)
+
+      return lung_obs, lung_datasets
+#+end_src
+
+Now call the function to obtain the human lung cell metadata and
+datasets:
+
+#+begin_src jupyter-python :session shared :results output
+  lung_obs, lung_datasets = get_lung_obs_and_datasets()
+#+end_src
+
+#+RESULTS:
+: Reading unprocessed lung obs parquet
+: Reading unprocessed lung datasets parquet
+
+Now view the returned DataFrames:
+
+#+begin_src jupyter-python :session shared :results output
+  print(f"lung_obs:\n\n{lung_obs}")
+  print()
+  print(f"lung_datasets:\n\n{lung_datasets}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+lung_obs:
+
+         soma_joinid                            dataset_id      assay  ... raw_mean_nnz raw_variance_nnz n_measured_vars
+0             322814  6e00ccf7-0749-46ef-a999-dba785630d52  10x 3' v2  ...     2.322318        46.893186           29754
+1             322815  6e00ccf7-0749-46ef-a999-dba785630d52  10x 3' v2  ...     2.478565        27.838200           29754
+2             322816  6e00ccf7-0749-46ef-a999-dba785630d52  10x 3' v2  ...     2.744115        86.921411           29754
+3             322817  6e00ccf7-0749-46ef-a999-dba785630d52  10x 3' v2  ...     1.906027        12.278453           29754
+4             322818  6e00ccf7-0749-46ef-a999-dba785630d52  10x 3' v2  ...     2.703430        39.164342           29754
+...              ...                                   ...        ...  ...          ...              ...             ...
+3677220     69651760  9f222629-9e39-47d0-b83f-e08d610c7479  10x 3' v2  ...     3.455224       200.698094           50205
+3677221     69651762  9f222629-9e39-47d0-b83f-e08d610c7479  10x 3' v3  ...     6.814715      2129.944792           50205
+3677222     69651763  9f222629-9e39-47d0-b83f-e08d610c7479  10x 5' v1  ...     2.686786        31.708578           50205
+3677223     69651765  9f222629-9e39-47d0-b83f-e08d610c7479  10x 3' v2  ...     3.422489       227.936529           50205
+3677224     69651766  9f222629-9e39-47d0-b83f-e08d610c7479  10x 3' v2  ...     2.527312        48.834409           50205
+
+[3677225 rows x 28 columns]
+
+lung_datasets:
+
+     soma_joinid  ... dataset_total_cell_count
+85            85  ...                     5499
+129          129  ...                     5467
+149          149  ...                     6947
+262          262  ...                     9409
+324          324  ...                    18386
+357          357  ...                    51876
+379          379  ...                    35699
+386          386  ...                    46500
+392          392  ...                    39778
+443          443  ...                    57019
+481          481  ...                    39204
+496          496  ...                   116313
+524          524  ...                    65662
+583          583  ...                   155232
+589          589  ...                    82991
+601          601  ...                    71752
+645          645  ...                   598266
+647          647  ...                   209126
+654          654  ...                   147137
+682          682  ...                   193108
+720          720  ...                    73047
+726          726  ...                   329762
+791          791  ...                   483152
+799          799  ...                  1462702
+802          802  ...                  1283972
+805          805  ...                  4062980
+807          807  ...                  2282447
+
+[27 rows x 10 columns]
+#+end_example
+
+* Identification of CELLxGENE citation publications within PubMed
