@@ -12,19 +12,20 @@ pilot, the objectives of this document include demonstration of:
 
 + Identification of publications corresponding to CELLxGENE datasets
 
++ Determination of the dataset filename and dataset file download.
+
 ** Background
 
-All single-cell RNA data from CZ CELLxGENE Discover is accessed,
-queried, and analyzed using the
-[[https://chanzuckerberg.github.io/cellxgene-census/][CELLxGENE
-Discover Census]].  Using cell-based slicing and querying one can:
+All single-cell RNA data from Chan Zuckerberg (CZ) CELLxGENE Discover
+is accessed, queried, and analyzed using the [[https://chanzuckerberg.github.io/cellxgene-census/][CELLxGENE Discover
+Census]]. Using cell-based slicing and querying one can:
 
 + Interact with the data through TileDB-SOMA
   
 + Get slices in AnnData, Seurat, or SingleCellExperiment objects
 
-The following sections draw from CZ CELLxGENE tutorials which
-demonstrate how to use the Census to:
+The following sections draw from CZ CELLxGENE tutorials, or a Chan
+Zuckerberg Initiative (CZI) repository, which demonstrate how to:
 
 + [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/analysis_demo/comp_bio_explore_and_load_lung_data.html][Explore and query the Census in the context of a single tissue, lung]]
 
@@ -33,6 +34,8 @@ demonstrate how to use the Census to:
 
 + [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/api_demo/census_citation_generation.html][Generate a citation string for all datasets contained in a Census
   slice]]
+
++ [[https://github.com/chanzuckerberg/single-cell-curation/blob/0c77179d2e794846861f8109c037b723507959cb/notebooks/curation_api/python_raw/get_dataset.ipynb][Fetch full metadata for a Dataset]]
 
 ** Development environment
 
@@ -68,6 +71,7 @@ To begin, we import modules, and assign module scope variables:
   import os
   import re
   from time import sleep
+  from traceback import print_exc
 
   from bs4 import BeautifulSoup
   import pandas as pd
@@ -75,10 +79,16 @@ To begin, we import modules, and assign module scope variables:
 
   DATA_DIR = "../data"
 
+  CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
+  CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
+
   NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
 
   HTTPS_SLEEP = 1
 #+end_src
+
+#+RESULTS:
+: https://api.cellxgene.cziscience.com
 
 Next we write the function:
 
@@ -144,11 +154,15 @@ Next we write the function:
       return lung_obs, lung_datasets
 #+end_src
 
-Then call it to obtain the human lung cell metadata and datasets, and
+Then call it to obtain the human lung cell metadata and datasets
+(using exception handling since accessing an external resource), and
 print the result:
 
 #+begin_src python :session shared :results output
-  lung_obs, lung_datasets = get_lung_obs_and_datasets()
+  try:
+      lung_obs, lung_datasets = get_lung_obs_and_datasets()
+  except Exception:
+      print_exc()
   print(f"lung_obs:\n\ncolumns: {lung_obs.columns}\n\n{lung_obs}")
   print()
   print(f"lung_datasets:\n\ncolumns: {lung_datasets.columns}\n\n{lung_datasets}")
@@ -240,8 +254,8 @@ for example:
 
 The ~citation~ provides the DOI, but not the title of the
 publication. Note that we will need the title later (see
-[[file:Chapter-02-E_Utilities.org][Chapter-02-E_Utilities.org]]). So, we examine the ~collection_name~ and
-~dataset_title~ columns:
+[[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]). So, we examine the ~collection_name~
+and ~dataset_title~ columns:
 
 #+begin_src python :session shared :results output
   print(lung_datasets[["collection_name", "dataset_title"]].iloc[4, :])
@@ -253,8 +267,8 @@ publication. Note that we will need the title later (see
 : Name: 324, dtype: object
 
 But it appears we still need to find the title by some method. So, we
-write a function that requests the DOI, then parses the resulting page
-to find the title.
+write a function that requests the DOI, then parses the resulting
+page, most likely from the publisher, to find the title.
 
 #+begin_src python :session shared :results silent :tangle CELLxGENE.py
   def get_title(citation):
@@ -343,11 +357,15 @@ to find the title.
       return title
 #+end_src
 
-Next we call the function for an example citation:
+Next we call the function for an example citation (again using
+exception handling since accessing an external resource):
 
 #+begin_src python :session shared :results output
-  citation = lung_datasets["citation"].iloc[0]
-  title = get_title(citation)
+  try:
+      citation = lung_datasets["citation"].iloc[0]
+      title = get_title(citation)
+  except Exception:
+      print_exc()
 #+end_src
 
 #+RESULTS:
@@ -356,9 +374,89 @@ Next we call the function for an example citation:
 : Found title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells' for citation URL: https://doi.org/10.1101/2020.06.16.156042
 
 Note that the function attempts to use ~requests~, and if it fails,
-~wget~, since some journals respond to one, but not the other. The
+~wget~, since some publishers respond to one, but not the other. The
 selectors were discovered by manually inspecting the pages returned
 for the human lung cell datasets using Google Chrome Developer Tools.
 
-Next, in [[file:Chapter-02-E_Utilities.org][Chapter-02-E_Utilities.org]], we write a function to search
-PubMed for the title.
+* Determine the dataset filename and download the dataset file.
+
+Following a notebook found in a CZI repository, we write a function to
+find the dataset filename, and to download the dataset file, given a
+row of the datasets DataFrame obtained above:
+
+#+begin_src python :session shared :results silent :tangle CELLxGENE.py
+  def get_and_download_dataset_h5ad_file(dataset_series):
+      """Get the dataset filename and download the dataset file.
+
+      Parameters
+      ----------
+      dataset_series : pd.Series
+          A row from the dataset DataFrame
+
+      Returns
+      -------
+      dataset : str
+         The dataset filename
+      """
+      # Need a default return value
+      dataset_filename = None
+
+      # Get the dataset object
+      collection_id = dataset_series.collection_id
+      dataset_id = dataset_series.dataset_id
+      dataset_url = f"{CELLXGENE_API_URL_BASE}/curation/v1/collections/{collection_id}/datasets/{dataset_id}"
+      sleep(HTTPS_SLEEP)
+      response = requests.get(dataset_url)
+      response.raise_for_status()
+      if response.status_code != 200:
+          logging.error(f"Could not get dataset for id {dataset_id}")
+          return
+
+      data = response.json()
+      if dataset_id != data["dataset_id"]:
+          logging.error(
+              f"Response dataset id: {data['dataset_id']} does not equal specified dataset id: {dataset_id}"
+          )
+          return
+
+      # Find H5AD files, if possible
+      assets = data["assets"]
+      for asset in assets:
+          if asset["filetype"] != "H5AD":
+              continue
+
+          # Found an H5AD file, so download it, if needed
+          dataset_filename = f"{dataset_id}.{asset['filetype']}"
+          dataset_filepath = f"{CELLXGENE_DIR}/{dataset_filename}"
+          if not os.path.exists(dataset_filepath):
+              print(f"Downloading dataset file: {dataset_filepath}")
+              with requests.get(asset["url"], stream=True) as response:
+                  response.raise_for_status()
+                  with open(dataset_filepath, "wb") as df:
+                      for chunk in response.iter_content(chunk_size=1024 * 1024):
+                          df.write(chunk)
+              print(f"Dataset file: {dataset_filepath} downloaded")
+
+          else:
+              print(f"Dataset file: {dataset_filepath} exists")
+
+      return dataset_filename
+#+end_src
+
+Then call it using the first row of the human lung cell datasets
+DataFrame obtained above, and print the result (we'll use exception
+handling when accessing an external resource from now on):
+
+#+begin_src python :session shared :results output
+  try:
+      dataset_series = lung_datasets.iloc[0]
+      get_and_download_dataset_h5ad_file(dataset_series)
+  except Exception:
+      print_exc()
+#+end_src
+
+#+RESULTS:
+: Dataset file: ../data/cellxgene/6e00ccf7-0749-46ef-a999-dba785630d52.H5AD exists
+
+Next, in [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]], we write functions to search
+PubMed for the title and identifiers.
