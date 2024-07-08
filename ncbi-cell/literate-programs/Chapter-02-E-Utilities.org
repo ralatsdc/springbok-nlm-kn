@@ -41,7 +41,7 @@ To begin, we import modules, and assign module scope variables:
   import logging
   import os
   from time import sleep
-  from traceback import print_exc()
+  from traceback import print_exc
   from urllib import parse
 
   from bs4 import BeautifulSoup
