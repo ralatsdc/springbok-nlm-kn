@@ -1,0 +1,150 @@
+#+title: Chapter 04: Use of OntoGPT
+#+author: Ray LeClair
+#+date <2024-07-08 Mon>
+
+* Objectives
+
+Since the NCBI Cell pipeline calls for the use of a Large Language
+Model (LLM) to process publications associated with CELLxGENE
+datasets, the objective of this document is to:
+
++ Investigate the use of OntoGPT for publication processing
+
+[[https://monarch-initiative.github.io/ontogpt/][OntoGPT]] is a Python package for extracting structured information from
+text using LLMs, instruction prompts, and ontology-based grounding.
+  
+** Background
+
+The primary extraction method currently implemented in OntoGPT is
+[[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][SPIRES: Structured Prompt Interrogation and Recursive Extraction of
+Semantics]], which:
+
++ Implements a Zero-Shot Learning (ZSL) approach to extracting nested
+  semantic structures from text
+
++ Uses OpenAI GPT models through their API
+
+This demonstration use the [[https://monarch-initiative.github.io/ontogpt/functions/#pubmed-annotate][pubmed-annotate]] function to retrieve full
+text of a publicaiton given a PubMed identifier (PMID), then performs
+extraction on the text with SPIRES using the [[https://monarch-initiative.github.io/ontogpt/cell_type/][Cell Type]] template.
+
+** Development environment
+
+See [[file:Introduction.ipynb][Introduction.ipynb]].
+
+*** Jupyter Notebook
+
+Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
+sourced, and the virtual environment has been activated.
+
+*** Emacs Org Mode
+
+Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
+evaluate this code block to activate the virtual environment:
+
+#+begin_src emacs-lisp :session shared :results silent
+  (pyvenv-activate "../../.venv")
+#+end_src
+
+* Investigate the use of OntoGPT for publication processing
+
+To begin, we import modules, and assign module scope variables:
+
+#+begin_src python :session shared :results silent :tangle OntoGPT.py
+  import os
+  import subprocess
+  from traceback import print_exc
+  
+  DATA_DIR = "../data"
+
+  ONTOGPT_DIR = f"{DATA_DIR}/ontogpt"
+#+end_src
+
+Then recall that in [[file:Chapter-02-E-Utilities.org][Chapter-02-E-Utilities.org]] we saw how to get the
+PMID for a title:
+
+#+begin_src python :session shared :results output
+  from CELLxGENE import get_lung_obs_and_datasets, get_title
+  from E_Utilities import get_pmid_for_title
+  try:
+      lung_obs, lung_datasets = get_lung_obs_and_datasets()
+      citation = lung_datasets["citation"].iloc[0]
+      title = get_title(citation)
+      pmid = get_pmid_for_title(title)
+  except Exception:
+      print_exc()
+  print(f"PMID: {pmid} found for title: {title}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Reading unprocessed lung obs parquet
+Reading unprocessed lung datasets parquet
+Getting title for citation URL: https://doi.org/10.1101/2020.06.16.156042
+Trying requests
+Found title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells' for citation URL: https://doi.org/10.1101/2020.06.16.156042
+Getting PMID for title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells'
+https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
+{'db': 'pubmed', 'term': 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells', 'field': 'title', 'retmode': 'json', 'email': 'raymond.leclair@gmail.com', 'api_key': '10a233bf53a1db01e78bc08e59520ace5e09'}
+Found PMID: 38540357 for title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells'
+PMID: 38540357 found for title: Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells
+#+end_example
+
+Since the ~pubmed-annotate~ function of OntoGPT is run on the command
+line, we use Python's ~subprocess~ module, caching results in a file
+to prevent duplicate processing:
+
+#+begin_src python :session shared :results silent :tangle OntoGPT.py
+def run_ontogpt_pubmed_annotate(pmid):
+    """Run the OntoGPT pubmed-annotate function for the specified PMID
+    associated with a dataset.
+
+    Parameters
+    ----------
+    pmid : str
+       The PubMed identifier found
+
+    Returns
+    -------
+    None
+    """
+    # Run OntoGPT pubmed-annotate function, if needed
+    if pmid is None:
+        return
+    output_filename = f"{pmid}.out"
+    output_filepath = f"{ONTOGPT_DIR}/{output_filename}"
+    if not os.path.exists(output_filepath):
+        print(f"Running ontogpt pubmed-annotate for PMID: {pmid}")
+        subprocess.run(
+            [
+                "ontogpt",
+                "pubmed-annotate",
+                "--template",
+                "cell_type",
+                pmid,
+                "--limit",
+                "1",
+                "--output",
+                output_filepath,
+            ],
+        )
+        print(f"Completed ontogpt pubmed-annotate for PMID: {pmid}")
+
+    else:
+        print(f"Ontogpt pubmed-annotate output for PMID: {pmid} exists")
+#+end_src
+
+Now call the function with the PMID obtained earler:
+
+#+begin_src python :session shared :results output
+  try:
+      run_ontogpt_pubmed_annotate(pmid)
+  except Exception:
+      print_exc()
+#+end_src
+
+#+RESULTS:
+: Running ontogpt pubmed-annotate for PMID: 38540357
+: WARNING:ontogpt.clients:llm_gpt4all module not found. GPT4All support will be disabled.
+: WARNING:ontogpt.engines.knowledge_engine:GPT4All client not available. GPT4All support will be disabled.
+: Completed ontogpt pubmed-annotate for PMID: 38540357
