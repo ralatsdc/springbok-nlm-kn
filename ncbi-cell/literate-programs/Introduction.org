@@ -42,11 +42,12 @@ Python to demonstrate both envisioned knowledge streams, and
 simplified use of a graph database for visualization. In particular,
 goals of this document include:
 
-+ Use of CELLxGENE to identify and download human lung cell datasets
-  and metadata (See [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]])
++ Use of CELLxGENE to identify and retrieve human lung cell dataset
+  metadata, and download corresponding dataset files (See
+  [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]])
 
 + Use of the NCBI E-Utilities to identify the citation corresponding
-  to a CELLxGENE dataset in PubMed (See [[file:Chapter-02-E_Utilities.org][Chapter-02-E_Utilities.org]])
+  to a CELLxGENE dataset in PubMed (See [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]])
 
 + Use of package NSForest for the discovery of minimum marker gene
   combinations for cell type identification from single-cell RNA
@@ -66,12 +67,11 @@ well as a virtual environment containing Python dependencies.
 
 ** Environment variables
 
-Accessing PubMed without limit requires creating an
-[[https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/][API
-key]] associated with the email address of an NCBI account. Running
-OntoGPT requires creating and funding an [[https://openai.com/api/][OpenAI platform]] account,
-configuring a [[https://platform.openai.com/api-keys][project API key]] , and creating a [[https://bioportal.bioontology.org/login][BioPortal]] account to be
-assigned an API key.
+Accessing PubMed without limit requires creating an [[https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/][API key]] associated
+with the email address of an NCBI account. Running OntoGPT requires
+creating and funding an [[https://openai.com/api/][OpenAI platform]] account, configuring a [[https://platform.openai.com/api-keys][project
+API key]] , and creating a [[https://bioportal.bioontology.org/login][BioPortal]] account to be assigned an API
+key.
 
 Since these keys should not be made public, this demonstration assigns
 them to environment variables in a ~.zshenv~ file as follows:
@@ -89,7 +89,7 @@ demonstration. Do not commit this file to the repository.
 ** Python dependencies
 
 This demonstration uses [[https://python-poetry.org/][Poetry]] to manage dependencies. Poetry was
-installed in its own virtual environment following the recommended
+installed in its own virtual environment following a recommended
 (manual) approach as follows
 
 #+begin_src sh
