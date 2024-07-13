@@ -32,8 +32,7 @@ Zuckerberg Initiative (CZI) repository, which demonstrate how to:
 + [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/api_demo/census_query_extract.html][Query the expression data and cell/gene metadata from the Census,
   and load them into common in-memory Python objects]]
 
-+ [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/api_demo/census_citation_generation.html][Generate a citation string for all datasets contained in a Census
-  slice]]
++ [[https://chanzuckerberg.github.io/cellxgene-census/notebooks/api_demo/census_citation_generation.html][Generate a citation string for all datasets contained in a Census slice]]
 
 + [[https://github.com/chanzuckerberg/single-cell-curation/blob/0c77179d2e794846861f8109c037b723507959cb/notebooks/curation_api/python_raw/get_dataset.ipynb][Fetch full metadata for a Dataset]]
 
@@ -86,9 +85,6 @@ To begin, we import modules, and assign module scope variables:
 
   HTTPS_SLEEP = 1
 #+end_src
-
-#+RESULTS:
-: https://api.cellxgene.cziscience.com
 
 Next we write the function:
 
