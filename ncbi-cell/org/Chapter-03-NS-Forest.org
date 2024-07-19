@@ -167,3 +167,7 @@ default ~cluster_header~ of ~"cell_type"~:
 
 #+RESULTS:
 : Completed NSForest for preprocessed AnnData file: pp_6e00ccf7-0749-46ef-a999-dba785630d52.H5AD
+
+Next, in [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-OntoGPT.ipynb]] we investigate the use of OntoGPT
+for publication processing. In [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]] we'll use the
+results produced by NS-Forest to populate an ArangoDB database graph.
