@@ -148,3 +148,7 @@ Now call the function with the PMID obtained earler:
 : WARNING:ontogpt.clients:llm_gpt4all module not found. GPT4All support will be disabled.
 : WARNING:ontogpt.engines.knowledge_engine:GPT4All client not available. GPT4All support will be disabled.
 : Completed ontogpt pubmed-annotate for PMID: 38540357
+
+Next, in [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]] we'll use the results produced by
+NS-Forest (See [[file:Chapter-03-NS-Forest.org][Chapter-03-NS-Forest.org]]) to populate an ArangoDB
+database graph.
