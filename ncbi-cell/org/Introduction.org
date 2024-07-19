@@ -58,7 +58,8 @@ goals of this document include:
   ontology-based grounding (See [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]])
 
 + Creation, population, and display of the processing results using
-  graph database ArangoDB (See [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]])
+  graph database ArangoDB (See
+  [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]])
 
 * Development environment
 
