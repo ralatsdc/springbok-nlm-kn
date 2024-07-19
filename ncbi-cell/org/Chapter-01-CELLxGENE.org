@@ -80,6 +80,7 @@ To begin, we import modules, and assign module scope variables:
 
   CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
   CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
+  CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
 
   NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
 
