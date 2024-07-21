@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # # Fetch full metadata for a Dataset
-# See: http://localhost:8889/notebooks/python_raw/get_dataset.ipynb
+# See: https://github.com/chanzuckerberg/single-cell-curation/blob/0c77179d2e794846861f8109c037b723507959cb/notebooks/curation_api/python_raw/get_dataset.ipynb
 
 # The script in this notebook retrieves full metadata for a given Dataset.
 # 

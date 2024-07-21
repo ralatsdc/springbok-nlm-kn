@@ -1,6 +1,8 @@
 .DS_Store
+.idea
 .ipynb_checkpoints
 .openai_cache.db
+.poetry
 .venv
 .zshenv
 *.csv
@@ -11,3 +13,4 @@
 *.pickle
 __pycache__
 arangodb/
+poetry
