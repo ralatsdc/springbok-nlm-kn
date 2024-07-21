@@ -50,7 +50,7 @@ evaluate this code block to activate the virtual environment:
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle OntoGPT.py
+#+begin_src python :session shared :results silent :tangle ../py/OntoGPT.py
   import os
   import subprocess
   from traceback import print_exc
@@ -94,7 +94,7 @@ Since the ~pubmed-annotate~ function of OntoGPT is run on the command
 line, we use Python's ~subprocess~ module, caching results in a file
 to prevent duplicate processing:
 
-#+begin_src python :session shared :results silent :tangle OntoGPT.py
+#+begin_src python :session shared :results silent :tangle ../py/OntoGPT.py
 def run_ontogpt_pubmed_annotate(pmid):
     """Run the OntoGPT pubmed-annotate function for the specified PMID
     associated with a dataset.

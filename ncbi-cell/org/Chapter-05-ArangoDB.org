@@ -65,7 +65,7 @@ evaluate this code block to activate the virtual environment:
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   import ast
   from glob import glob
   import os
@@ -92,7 +92,7 @@ creating the database, if needed, or getting it, otherwise. We will
 follow this convention when handling other database objects
 later. Here's the function we need:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def create_or_get_database(database_name):
       """Create or get an ArangoDB database.
 
@@ -120,7 +120,7 @@ later. Here's the function we need:
 
 Note that we can delete the database as follows:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def delete_database(database_name):
       """Delete an ArangoDB database.
 
@@ -168,7 +168,7 @@ named collections, so we will use the names ~cell~ and ~gene~.
 Following our convention, we create the graph, if needed, or get it,
 otherwise.  Here's the function:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def create_or_get_graph(db, graph_name):
       """Create or get an ArangoDB database graph.
 
@@ -209,7 +209,7 @@ the convention of labeling the graph by it's vertices:
 
 Note that we can delete the graph as follows:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def delete_graph(db, graph_name):
       """Delete an ArangoDB database graph.
 
@@ -234,7 +234,7 @@ Note that we can delete the graph as follows:
 
 Following our earlier conventions, here's the function we need:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def create_or_get_vertex_collection(graph, vertex_name):
       """Create, or get an ArangoDB database graph vertex collection.
 
@@ -276,7 +276,7 @@ Now we create the two named vertex collections:
 
 Note that we can delete a vertex collection as follows:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def delete_vertex_collection(graph, vertex_name):
       """Delete an ArangoDB database graph vertex collection.
 
@@ -304,7 +304,7 @@ consisting of a from and to vertex collection. When using this
 approach, edges cannot be inserted into the collection unless valid.
 Here's the function we need, taking this defensive approach:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
     def create_or_get_edge_collection(graph, from_vertex_name, to_vertex_name):
         """Create, or get an ArangoDB database edge collection from and
         to the specified vertices.
@@ -352,7 +352,7 @@ Now create a single edge collection from cell to gene vertices:
 
 Note that we can delete an edge collection as follows:
 
-#+begin_src python :session shared :results silent :tangle ArangoDB.py
+#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
   def delete_edge_collection(graph, edge_name):
       """Delete an ArangoDB database graph edge definition and collection.
 

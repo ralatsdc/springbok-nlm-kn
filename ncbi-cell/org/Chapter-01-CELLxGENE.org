@@ -65,7 +65,7 @@ resulting DataFrames are returned.
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle CELLxGENE.py
+#+begin_src python :session shared :results silent :tangle ../py/CELLxGENE.py
   import logging
   import os
   import re
@@ -89,7 +89,7 @@ To begin, we import modules, and assign module scope variables:
 
 Next we write the function:
 
-#+begin_src python :session shared :results silent :tangle CELLxGENE.py
+#+begin_src python :session shared :results silent :tangle ../py/CELLxGENE.py
   def get_lung_obs_and_datasets():
       """Use the CZ CELLxGENE Census to obtain all unprocessed human
       lung cell metadata and datasets, then write the resulting Pandas
@@ -267,7 +267,7 @@ But it appears we still need to find the title by some method. So, we
 write a function that requests the DOI, then parses the resulting
 page, most likely from the publisher, to find the title.
 
-#+begin_src python :session shared :results silent :tangle CELLxGENE.py
+#+begin_src python :session shared :results silent :tangle ../py/CELLxGENE.py
   def get_title(citation):
       """Get the title given a dataset citation. Note that only wget
       succeeded for Cell Press journals, and neither requests nor wget
@@ -381,7 +381,7 @@ Following a notebook found in a CZI repository, we write a function to
 find the dataset filename, and to download the dataset file, given a
 row of the datasets DataFrame obtained above:
 
-#+begin_src python :session shared :results silent :tangle CELLxGENE.py
+#+begin_src python :session shared :results silent :tangle ../py/CELLxGENE.py
   def get_and_download_dataset_h5ad_file(dataset_series):
       """Get the dataset filename and download the dataset file.
 

@@ -37,7 +37,7 @@ evaluate this code block to activate the virtual environment:
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle E_Utilities.py
+#+begin_src python :session shared :results silent :tangle ../py/E_Utilities.py
   import logging
   import os
   from time import sleep
@@ -81,7 +81,7 @@ the titles of the corresponding publications earlier (see
 Now we can write a function using the E-Utilities to search PubMed for
 the title:
 
-#+begin_src python :session shared :results silent :tangle E_Utilities.py
+#+begin_src python :session shared :results silent :tangle ../py/E_Utilities.py
   def get_pmid_for_title(title):
       """Search PubMed using a title to find the corresponding PMID.
 
@@ -151,7 +151,7 @@ PubMed Identifiers (PMIDs) can be returned. So we need to write a
 function that returns the title for a given PMID to confirm which of
 the multiple PMIDs returned is correct as follows:
 
-#+begin_src python :session shared :results silent :tangle E_Utilities.py
+#+begin_src python :session shared :results silent :tangle ../py/E_Utilities.py
   def get_title_for_pmid(pmid):
       """Fetch from PubMed using a PMID to find the corresponding title.
 

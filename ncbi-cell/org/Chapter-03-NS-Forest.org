@@ -42,7 +42,7 @@ been previously identified and downloaded (see
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle NSForest.py
+#+begin_src python :session shared :results silent :tangle ../py/NSForest.py
   import os
 
   import nsforest as ns
@@ -78,7 +78,7 @@ Next we write the function, noting:
   order. This step can still be run with no effects, but the runtime
   may increase.
 
-#+begin_src python :session shared :results silent :tangle NSForest.py
+#+begin_src python :session shared :results silent :tangle ../py/NSForest.py
 def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type"):
     """Run NSForest using the specified dataset filename, and
     cluster_header.
