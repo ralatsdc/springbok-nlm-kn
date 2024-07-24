@@ -27,7 +27,8 @@ csvFilename = channel.value("cell_type_results.csv")
 
 process nsforest {
 
-    // container "pgc-images.sbgenomics.com/deslattesmaysa2/salmon:v1.9"
+    container "ralatsdio/nsforst:latest"
+    conda "/opt/conda/envs/nsforest"
 
     input:
     path hda5Filepath
