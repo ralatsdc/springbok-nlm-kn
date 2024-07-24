@@ -2,7 +2,7 @@
 
 def helpMessage() {
     log.info """
-    Usage: nextflow run nsforest.nf --cxgPaths <cxgPath/*.HDA5> --csvBasePath <csvBasePath>
+    Usage: nextflow run nsforest.nf --cxgPaths 'cxgPath/*.HDA5' --csvBasePath "csvBasePath"
            nextflow run nsforest.nf --cxgPaths '../../data/cellxgene-sample/*.H5AD' --csvBasePath "$PWD/results"
 
     Options:
