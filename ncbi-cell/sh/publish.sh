@@ -13,7 +13,7 @@ for org_file in $org_files; do
 
     echo "Converting $org_file to $ipynb_file"
     cat $org_file | sed 's/src python/src jupyter-python/' > tmp.org
-    pandoc tmp.org -o $home/ipynb/$ipynb_file
+    pandoc tmp.org --wrap=preserve -o $home/ipynb/$ipynb_file
     rm tmp.org
 
 done
