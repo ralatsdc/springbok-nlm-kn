@@ -105,10 +105,12 @@ This demonstration uses Poetry to manage dependencies. Poetry was
 installed in its own virtual environment following a recommended
 (manual) approach as follows
 
-python -m venv .poetry
-source .poetry/bin/activate
-python -m pip install -r .poetry.txt
-deactivate
+#+begin_src sh
+  python -m venv .poetry
+  source .poetry/bin/activate
+  python -m pip install -r .poetry.txt
+  deactivate
+#+end_src
 
 Then the dependencies specified in the ~pyproject.toml~ file in the
 root directory of this repository were installed as follows:
