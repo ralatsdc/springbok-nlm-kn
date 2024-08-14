@@ -96,7 +96,7 @@ installed in its own virtual environment following a recommended
 #+begin_src sh
   python -m venv .poetry
   source .poetry/bin/activate
-  python -m pip install -i .poetry.txt
+  python -m pip install -r .poetry.txt
   deactivate
 #+end_src
 
