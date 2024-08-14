@@ -1,6 +1,6 @@
-#+title: Chapter 03: Use of NS-Forest
-#+author: Ray LeClair
-#+date <2024-07-07 Sun>
+*Chapter 03: Use of NS-Forest*
+
+Ray LeClair <2024-07-07 Sun>
 
 * Objectives
 
@@ -13,11 +13,14 @@ pipeline, the objective of this document is to:
   
 ** Background
 
-This [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]] walks through all aspects of using NS-Forest.
+The NS-Forest repository contains a tutorial that walks through all
+aspects of using NS-Forest.
+
+See: [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]] 
 
 ** Development environment
 
-See [[file:Introduction.ipynb][Introduction.ipynb]].
+See: [[file:Introduction.ipynb][Introduction.ipynb]]
 
 *** Jupyter Notebook
 
@@ -37,8 +40,9 @@ evaluate this code block to activate the virtual environment:
 
 Following the tutorial, we write a function that runs NS-Forest on an
 example human lung cell CELLxGENE dataset. We assume the dataset has
-been previously identified and downloaded (see
-[[file:Chapter-01-CELLxGENE.org][Chapter-01-CELLxGENE.org]]).
+been previously identified and downloaded.
+
+See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
 
 To begin, we import modules, and assign module scope variables:
 
@@ -168,6 +172,11 @@ default ~cluster_header~ of ~"cell_type"~:
 #+RESULTS:
 : Completed NSForest for preprocessed AnnData file: pp_6e00ccf7-0749-46ef-a999-dba785630d52.H5AD
 
-Next, in [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-OntoGPT.ipynb]] we investigate the use of OntoGPT
-for publication processing. In [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]] we'll use the
-results produced by NS-Forest to populate an ArangoDB database graph.
+Next, in Chapter 04 we investigate the use of OntoGPT for publication
+processing. In Chapter 05 we'll use the results produced by NS-Forest
+to populate an ArangoDB database graph.
+
+See:
+
+- [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-OntoGPT.ipynb]]
+- [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]

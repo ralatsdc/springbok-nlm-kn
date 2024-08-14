@@ -1,6 +1,6 @@
-#+title: Chapter 04: Use of OntoGPT
-#+author: Ray LeClair
-#+date <2024-07-08 Mon>
+*Chapter 04: Use of OntoGPT*
+
+Ray LeClair <2024-07-08 Mon>
 
 * Objectives
 
@@ -10,27 +10,33 @@ datasets, the objective of this document is to:
 
 + Investigate the use of OntoGPT for publication processing
 
-[[https://monarch-initiative.github.io/ontogpt/][OntoGPT]] is a Python package for extracting structured information from
+OntoGP is a Python package for extracting structured information from
 text using LLMs, instruction prompts, and ontology-based grounding.
   
+See: [[https://monarch-initiative.github.io/ontogpt/][OntoGPT]]
+
 ** Background
 
 The primary extraction method currently implemented in OntoGPT is
-[[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][SPIRES: Structured Prompt Interrogation and Recursive Extraction of
-Semantics]], which:
+SPIRES: Structured Prompt Interrogation and Recursive Extraction of
+Semantics, which:
 
 + Implements a Zero-Shot Learning (ZSL) approach to extracting nested
   semantic structures from text
 
 + Uses OpenAI GPT models through their API
 
-This demonstration use the [[https://monarch-initiative.github.io/ontogpt/functions/#pubmed-annotate][pubmed-annotate]] function to retrieve full
+This demonstration use the ~pubmed-annotate~ function to retrieve full
 text of a publicaiton given a PubMed identifier (PMID), then performs
-extraction on the text with SPIRES using the [[https://monarch-initiative.github.io/ontogpt/cell_type/][Cell Type]] template.
+extraction on the text with SPIRES using the "Cell Type" template.
+
+[[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][- SPIRES: Structured Prompt Interrogation and Recursive Extraction of Semantics]]
+- [[https://monarch-initiative.github.io/ontogpt/functions/#pubmed-annotate][pubmed-annotate]]
+- [[https://monarch-initiative.github.io/ontogpt/cell_type/][Cell Type]]
 
 ** Development environment
 
-See [[file:Introduction.ipynb][Introduction.ipynb]].
+See: [[file:Introduction.ipynb][Introduction.ipynb]]
 
 *** Jupyter Notebook
 
@@ -149,6 +155,10 @@ Now call the function with the PMID obtained earler:
 : WARNING:ontogpt.engines.knowledge_engine:GPT4All client not available. GPT4All support will be disabled.
 : Completed ontogpt pubmed-annotate for PMID: 38540357
 
-Next, in [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]] we'll use the results produced by
-NS-Forest (See [[file:Chapter-03-NS-Forest.org][Chapter-03-NS-Forest.org]]) to populate an ArangoDB
-database graph.
+Next, in Chapter 05 we'll use the results produced by NS-Forest to
+populate an ArangoDB database graph.
+
+See:
+
+- [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
+- [[file:Chapter-03-NS-Forest.org][Chapter-03-NS-Forest.org]]

@@ -1,6 +1,6 @@
-#+title: Chapter 01: Use of CELLxGENE
-#+author: Ray LeClair
-#+date: <2024-07-01 Mon>
+*Chapter 01: Use of CELLxGENE*
+
+Ray LeClair <2024-07-01 Mon>
 
 * Objectives
 
@@ -17,12 +17,14 @@ pilot, the objectives of this document include demonstration of:
 ** Background
 
 All single-cell RNA data from Chan Zuckerberg (CZ) CELLxGENE Discover
-is accessed, queried, and analyzed using the [[https://chanzuckerberg.github.io/cellxgene-census/][CELLxGENE Discover
-Census]]. Using cell-based slicing and querying one can:
+is accessed, queried, and analyzed using the CELLxGENE Discover
+Census. Using cell-based slicing and querying one can:
 
 + Interact with the data through TileDB-SOMA
   
 + Get slices in AnnData, Seurat, or SingleCellExperiment objects
+
+See: [[https://chanzuckerberg.github.io/cellxgene-census/][CELLxGENE Discover Census]]
 
 The following sections draw from CZ CELLxGENE tutorials, or a Chan
 Zuckerberg Initiative (CZI) repository, which demonstrate how to:
@@ -38,7 +40,7 @@ Zuckerberg Initiative (CZI) repository, which demonstrate how to:
 
 ** Development environment
 
-See [[file:Introduction.ipynb][Introduction.ipynb]].
+See: [[file:Introduction.ipynb][Introduction.ipynb]]
 
 *** Jupyter Notebook
 
@@ -250,9 +252,11 @@ for example:
 : Publication: https://doi.org/10.1016/j.immuni.2023.01.032 Dataset Version: https://datasets.cellxgene.cziscience.com/dd4da8b8-4804-4ccb-b616-d4c62e1782e9.h5ad curated and distributed by CZ CELLxGENE Discover in Collection: https://cellxgene.cziscience.com/collections/03cdc7f4-bd08-49d0-a395-4487c0e5a168
 
 The ~citation~ provides the DOI, but not the title of the
-publication. Note that we will need the title later (see
-[[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]). So, we examine the ~collection_name~
-and ~dataset_title~ columns:
+publication. Note that we will need the title later in Chapter 02:
+E-Utilities. So, we examine the ~collection_name~ and ~dataset_title~
+columns:
+
+See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
 
 #+begin_src python :session shared :results output
   print(lung_datasets[["collection_name", "dataset_title"]].iloc[4, :])
@@ -455,5 +459,7 @@ handling when accessing an external resource from now on):
 #+RESULTS:
 : Dataset file: ../data/cellxgene/6e00ccf7-0749-46ef-a999-dba785630d52.H5AD exists
 
-Next, in [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]], we write functions to search
-PubMed for the title and identifiers.
+Next, in Chapter 02 we write functions to search PubMed for the title
+and identifiers.
+
+See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]

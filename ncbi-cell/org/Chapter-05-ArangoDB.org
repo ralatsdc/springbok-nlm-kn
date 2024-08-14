@@ -1,6 +1,6 @@
-#+title: Chapter 05: Use of ArangoDB
-#+author: Ray LeClair
-#+date <2024-07-14 Sun>
+*Chapter 05: Use of ArangoDB*
+
+Ray LeClair <2024-07-14 Sun>
 
 * Objectives
 
@@ -19,16 +19,18 @@ objectives of this document is to demonstrate how to:
 
 + Insert graph vertices and edges
 
-The [[https://en.wikipedia.org/wiki/ArangoDB][ArangoDB]] database system, developed by ArangoDB Inc., supports
+The ArangoDB database system, developed by ArangoDB Inc., supports
 three data models (graphs, JSON documents, and key/value pairs) within
 one database core, and provides a unified query language, AQL
 (ArangoDB Query Language).
   
+See: [[https://en.wikipedia.org/wiki/ArangoDB][ArangoDB]]
+
 ** Background
 
-An instance of ArangoDB can be run using the [[https://hub.docker.com/_/arangodb][official Docker
-image]]. For example, a instance with authentication disabled can be
-run as follows:
+An instance of ArangoDB can be run using the official Docker
+image. For example, a instance with authentication disabled can be run
+as follows:
 
 #+begin_src zsh :results silent
   docker run \
@@ -40,12 +42,17 @@ run as follows:
 #+end_src
 
 where ~ARANGODB_HOME~ has been set to the name of the directory in
-which to persist data. Now [[https://docs.python-arango.com/en/main/#][python-arango]] can be used to interact with
-the database system using Python.
+which to persist data. Now ~python-arango~ can be used to interact
+with the database system using Python.
+
+See:
+
+- [[https://hub.docker.com/_/arangodb][ArangoDB Docker image]]
+- [[https://docs.python-arango.com/en/main/#][python-arango]]
 
 ** Development environment
 
-See [[file:Introduction.ipynb][Introduction.ipynb]].
+See: [[file:Introduction.ipynb][Introduction.ipynb]]
 
 *** Jupyter Notebook
 
@@ -158,12 +165,14 @@ Now initialize a named database:
 * Create or get, and delete a database graph
 
 For purposes of this demonstration, we assume we have run NS-Forest
-for a set of CELLxGENE datasets, as shown in
-[[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]], naively using the default ~cluster_header~
-of ~"cell_type"~ to obtain a set of marker genes for each cell type
-included in each dataset. It is natural, then, to treat cell types and
-marker genes as vertices of a graph. ArangoDB collects vertices in
-named collections, so we will use the names ~cell~ and ~gene~.
+for a set of CELLxGENE datasets, as shown in Chapter 03, naively using
+the default ~cluster_header~ of ~"cell_type"~ to obtain a set of
+marker genes for each cell type included in each dataset. It is
+natural, then, to treat cell types and marker genes as vertices of a
+graph. ArangoDB collects vertices in named collections, so we will use
+the names ~cell~ and ~gene~.
+
+See: [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]]
 
 Following our convention, we create the graph, if needed, or get it,
 otherwise.  Here's the function:
