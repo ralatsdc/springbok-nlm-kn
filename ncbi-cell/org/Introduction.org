@@ -13,15 +13,15 @@ discovery of novel diagnostic biomarkers and therapeutic targets.
 
 Two streams of knowledge are envisioned:
 
-+ Single cell genomics data captured from existing data repositories
-  (e.g., CZI CELLxGENE, NeMO) will be analyzed to produce information
-  about cell type-specific marker genes and differential expression
-  patterns
+- Single cell genomics data captured from existing data repositories
+    (e.g., CZI CELLxGENE, NeMO) will be analyzed to produce information
+    about cell type-specific marker genes and differential expression
+    patterns
 
-+ Open access peer-reviewed publications reporting results from single
-  cell genomics experiments from PubMed Central (PMC) will be
-  processed to extract information about cell type-specific marker
-  genes and differential expression patterns
+- Open access peer-reviewed publications reporting results from single
+    cell genomics experiments from PubMed Central (PMC) will be
+    processed to extract information about cell type-specific marker
+    genes and differential expression patterns
 
 In both cases, the information will be linked with experiment metadata
 about species and specimen sample sources, disease states, and
@@ -42,32 +42,32 @@ Python to demonstrate both envisioned knowledge streams, and
 simplified use of a graph database for visualization. In particular,
 goals of this document include:
 
-+ Use of CELLxGENE to identify and retrieve human lung cell dataset
-  metadata, and download corresponding dataset files
+- Use of CELLxGENE to identify and retrieve human lung cell dataset
+    metadata, and download corresponding dataset files
 
-  See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
+    See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
 
-+ Use of the NCBI E-Utilities to identify the citation corresponding
-  to a CELLxGENE dataset in PubMed
+- Use of the NCBI E-Utilities to identify the citation corresponding
+    to a CELLxGENE dataset in PubMed
 
-  See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
+    See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
 
-+ Use of package NSForest for the discovery of minimum marker gene
-  combinations for cell type identification from single-cell RNA
-  sequencing data
+- Use of package NSForest for the discovery of minimum marker gene
+    combinations for cell type identification from single-cell RNA
+    sequencing data
 
-  See: [[file:Chapter-03-NSForest.ipynb][Chapter-03-NSforest]]
+    See: [[file:Chapter-03-NSForest.ipynb][Chapter-03-NSforest]]
 
-+ Use of package OntoGPT for extracting structured information from
-  text with large language models (LLMs), instruction prompts, and
-  ontology-based grounding
+- Use of package OntoGPT for extracting structured information from
+    text with large language models (LLMs), instruction prompts, and
+    ontology-based grounding
 
-  See: [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]]
+    See: [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]]
 
-+ Creation, population, and display of the processing results using
-  graph database ArangoDB
+- Creation, population, and display of the processing results using
+    graph database ArangoDB
 
-  See: [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
+    See: [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
 
 * Development environment
 
@@ -84,12 +84,10 @@ API key, and creating a BioPortal account to be assigned an API key.
 Since these keys should not be made public, this demonstration assigns
 them to environment variables in a ~.zshenv~ file as follows:
 
-#+begin_src sh
-  export BIOPORTAL_API_KEY=<YOUR_BIOPORTAL_API_KEY>
-  export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
-  export NCBI_EMAIL=<YOUR_NCBI_EMAIL>
-  export NCBI_API_KEY=<YOUR_NCBI_API_KEY>
-#+end_src
+export BIOPORTAL<sub>APIKEY</sub>=<YOUR<sub>BIOPORTALAPIKEY</sub>>
+export OPENAI<sub>APIKEY</sub>=<YOUR<sub>OPENAIAPIKEY</sub>>
+export NCBI<sub>EMAIL</sub>=<YOUR<sub>NCBIEMAIL</sub>>
+export NCBI<sub>APIKEY</sub>=<YOUR<sub>NCBIAPIKEY</sub>>
 
 This file must be created and sourced prior to running this
 demonstration. Do not commit this file to the repository.
@@ -107,20 +105,17 @@ This demonstration uses Poetry to manage dependencies. Poetry was
 installed in its own virtual environment following a recommended
 (manual) approach as follows
 
-#+begin_src sh
-  python -m venv .poetry
-  source .poetry/bin/activate
-  python -m pip install -r .poetry.txt
-  deactivate
-#+end_src
+python -m venv .poetry
+source .poetry/bin/activate
+python -m pip install -r .poetry.txt
+deactivate
 
 Then the dependencies specified in the ~pyproject.toml~ file in the
 root directory of this repository were installed as follows:
 
-#+begin_src zsh
-  python -m venv .venv
-  source .venv/bin/activate
-  .poetry/bin/poetry install
-#+end_src
+python -m venv .venv
+source .venv/bin/activate
+.poetry/bin/poetry install
 
 See: [[https://python-poetry.org/][Poetry]]
+

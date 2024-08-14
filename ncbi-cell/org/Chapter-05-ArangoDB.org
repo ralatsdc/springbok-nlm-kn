@@ -9,21 +9,21 @@ with ArangoDB, including performance comparison testing with Neo4j,
 interaction with the ArangoDB developers, and use in production, the
 objectives of this document is to demonstrate how to:
 
-+ Create or get, and delete an ArangoDB database
+- Create or get, and delete an ArangoDB database
 
-+ Create or get, and delete a database graph
+- Create or get, and delete a database graph
 
-+ Create or get, and delete a graph vertex collection
+- Create or get, and delete a graph vertex collection
 
-+ Create or get, and delete a graph edge definition and collection
+- Create or get, and delete a graph edge definition and collection
 
-+ Insert graph vertices and edges
+- Insert graph vertices and edges
 
 The ArangoDB database system, developed by ArangoDB Inc., supports
 three data models (graphs, JSON documents, and key/value pairs) within
 one database core, and provides a unified query language, AQL
 (ArangoDB Query Language).
-  
+
 See: [[https://en.wikipedia.org/wiki/ArangoDB][ArangoDB]]
 
 ** Background
@@ -32,14 +32,12 @@ An instance of ArangoDB can be run using the official Docker
 image. For example, a instance with authentication disabled can be run
 as follows:
 
-#+begin_src zsh :results silent
-  docker run \
-       -e ARANGO_NO_AUTH=1 \
-       -p 8529:8529 \
-       -d \
-       -v $ARANGODB_HOME:/var/lib/arangodb3 \
-       arangodb
-#+end_src
+docker run \\
+-e ARANGO<sub>NOAUTH</sub>=1 \\
+-p 8529:8529 \\
+-d \\
+-v \$ARANGODB<sub>HOME</sub>:/var/lib/arangodb3 \\
+arangodb
 
 where ~ARANGODB_HOME~ has been set to the name of the directory in
 which to persist data. Now ~python-arango~ can be used to interact
@@ -72,7 +70,7 @@ evaluate this code block to activate the virtual environment:
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   import ast
   from glob import glob
   import os
@@ -99,7 +97,7 @@ creating the database, if needed, or getting it, otherwise. We will
 follow this convention when handling other database objects
 later. Here's the function we need:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def create_or_get_database(database_name):
       """Create or get an ArangoDB database.
 
@@ -127,7 +125,7 @@ later. Here's the function we need:
 
 Note that we can delete the database as follows:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def delete_database(database_name):
       """Delete an ArangoDB database.
 
@@ -148,7 +146,7 @@ Note that we can delete the database as follows:
 
 Now initialize a named database:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   try:
       database_name = "ncbi-cell-v0.1.0"
       delete_database(database_name)
@@ -156,11 +154,6 @@ Now initialize a named database:
   except Exception:
       print_exc()
 #+end_src
-
-#+RESULTS:
-: Deleting ArangoDB database: ncbi-cell-v0.1.0
-: Creating ArangoDB database: ncbi-cell-v0.1.0
-: Getting ArangoDB database: ncbi-cell-v0.1.0
 
 * Create or get, and delete a database graph
 
@@ -175,9 +168,9 @@ the names ~cell~ and ~gene~.
 See: [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]]
 
 Following our convention, we create the graph, if needed, or get it,
-otherwise.  Here's the function:
+otherwise. Here's the function:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def create_or_get_graph(db, graph_name):
       """Create or get an ArangoDB database graph.
 
@@ -208,17 +201,14 @@ Although we anticipate needing to create multiple graphs within the
 NCBI Cell pilot database, we will only create one graph here. We adopt
 the convention of labeling the graph by it's vertices:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   graph_name = "cell-gene"
   graph = create_or_get_graph(db, graph_name)
 #+end_src
 
-#+RESULTS:
-: Creating database graph: cell-gene
-
 Note that we can delete the graph as follows:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def delete_graph(db, graph_name):
       """Delete an ArangoDB database graph.
 
@@ -243,7 +233,7 @@ Note that we can delete the graph as follows:
 
 Following our earlier conventions, here's the function we need:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def create_or_get_vertex_collection(graph, vertex_name):
       """Create, or get an ArangoDB database graph vertex collection.
 
@@ -272,20 +262,16 @@ Following our earlier conventions, here's the function we need:
 
 Now we create the two named vertex collections:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   cell_vertex_name = "cell"
   cell = create_or_get_vertex_collection(graph, cell_vertex_name)
   gene_vertex_name = "gene"
   gene = create_or_get_vertex_collection(graph, gene_vertex_name)
 #+end_src
 
-#+RESULTS:
-: Creating graph vertex collection: cell
-: Creating graph vertex collection: gene
-
 Note that we can delete a vertex collection as follows:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def delete_vertex_collection(graph, vertex_name):
       """Delete an ArangoDB database graph vertex collection.
 
@@ -313,55 +299,52 @@ consisting of a from and to vertex collection. When using this
 approach, edges cannot be inserted into the collection unless valid.
 Here's the function we need, taking this defensive approach:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
-    def create_or_get_edge_collection(graph, from_vertex_name, to_vertex_name):
-        """Create, or get an ArangoDB database edge collection from and
-        to the specified vertices.
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
+  def create_or_get_edge_collection(graph, from_vertex_name, to_vertex_name):
+      """Create, or get an ArangoDB database edge collection from and
+      to the specified vertices.
 
-        Parameters
-        ----------
-        graph : arango.graph.Graph
-            Graph
-        from_vertex : str
-            Name of the vertex collection from which the edge originates
-        to_vertex : str
-            Name of the vertex collection to which the edge terminates
+      Parameters
+      ----------
+      graph : arango.graph.Graph
+          Graph
+      from_vertex : str
+          Name of the vertex collection from which the edge originates
+      to_vertex : str
+          Name of the vertex collection to which the edge terminates
 
-        Returns
-        -------
-        collection : arango.collection.EdgeCollection
-            Graph edge collection
-        collection_name : str
-            Name of the edge collection
-        """
-        # Create, or get the edge collection
-        collection_name = f"{from_vertex_name}-{to_vertex_name}"
-        if not graph.has_edge_definition(collection_name):
-            print(f"Creating edge definition: {collection_name}")
-            collection = graph.create_edge_definition(
-                edge_collection=collection_name,
-                from_vertex_collections=[f"{from_vertex_name}"],
-                to_vertex_collections=[f"{to_vertex_name}"],
-            )
-        else:
-            print(f"Getting edge collection: {collection_name}")
-            collection = graph.edge_collection(collection_name)
+      Returns
+      -------
+      collection : arango.collection.EdgeCollection
+          Graph edge collection
+      collection_name : str
+          Name of the edge collection
+      """
+      # Create, or get the edge collection
+      collection_name = f"{from_vertex_name}-{to_vertex_name}"
+      if not graph.has_edge_definition(collection_name):
+          print(f"Creating edge definition: {collection_name}")
+          collection = graph.create_edge_definition(
+              edge_collection=collection_name,
+              from_vertex_collections=[f"{from_vertex_name}"],
+              to_vertex_collections=[f"{to_vertex_name}"],
+          )
+      else:
+          print(f"Getting edge collection: {collection_name}")
+          collection = graph.edge_collection(collection_name)
 
-        return collection, collection_name
+      return collection, collection_name
 #+end_src
 
 Now create a single edge collection from cell to gene vertices:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   cell_gene, edge_name = create_or_get_edge_collection(graph, "cell", "gene")
 #+end_src
 
-#+RESULTS:
-: Getting edge collection: cell-gene
-
 Note that we can delete an edge collection as follows:
 
-#+begin_src python :session shared :results silent :tangle ../py/ArangoDB.py
+#+begin_src python :results silent :session shared :tangle ../py/ArangoDB.py
   def delete_edge_collection(graph, edge_name):
       """Delete an ArangoDB database graph edge definition and collection.
 
@@ -391,7 +374,7 @@ content, so we collect the dataset identifiers for cell and gene
 vertices, and cluster names for gene vertices to use for inserting
 edges to dataset vertices we might add later.
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   try:
       # Read each NSForest results file
       for fn in glob(f"{NSFOREST_DIR}/*/*.csv"):
@@ -463,1687 +446,9 @@ edges to dataset vertices we might add later.
       print_exc()
 #+end_src
 
-#+RESULTS:
-#+begin_example
-Reading results file: ../data/nsforest-2024-06-27/d41f45c1-1b7b-4573-a998-ac5c5acb1647/cell_type_results.csv
-Inserting cell: B-cell
-Inserting gene: ENSG00000105369
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000105369
-Inserting gene: ENSG00000156738
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000156738
-Inserting cell: T-cell
-Inserting gene: ENSG00000167286
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000167286
-Inserting cell: blood-vessel-endothelial-cell
-Inserting gene: ENSG00000176435
-Inserting edge from cell vertex with key: blood-vessel-endothelial-cell to gene vertex with key: ENSG00000176435
-Inserting cell: endothelial-cell-of-lymphatic-vessel
-Inserting gene: ENSG00000137077
-Inserting edge from cell vertex with key: endothelial-cell-of-lymphatic-vessel to gene vertex with key: ENSG00000137077
-Inserting gene: ENSG00000160180
-Inserting edge from cell vertex with key: endothelial-cell-of-lymphatic-vessel to gene vertex with key: ENSG00000160180
-Inserting cell: epithelial-cell
-Inserting gene: ENSG00000111057
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000111057
-Inserting cell: fibroblast
-Inserting gene: ENSG00000011465
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000011465
-Inserting gene: ENSG00000164692
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000164692
-Inserting cell: myeloid-cell
-Inserting gene: ENSG00000158869
-Inserting edge from cell vertex with key: myeloid-cell to gene vertex with key: ENSG00000158869
-Inserting gene: ENSG00000129226
-Inserting edge from cell vertex with key: myeloid-cell to gene vertex with key: ENSG00000129226
-Inserting cell: neutrophil
-Inserting gene: ENSG00000162747
-Inserting edge from cell vertex with key: neutrophil to gene vertex with key: ENSG00000162747
-Reading results file: ../data/nsforest-2024-06-27/810ac45f-8969-4698-b42c-652f802f75c2/cell_type_results.csv
-Inserting cell: capillary-endothelial-cell
-Inserting gene: ENSG00000167434
-Inserting edge from cell vertex with key: capillary-endothelial-cell to gene vertex with key: ENSG00000167434
-Inserting cell: endothelial-cell
-Inserting gene: ENSG00000127083
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000127083
-Updating gene: ENSG00000164692
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000164692
-Inserting cell: endothelial-cell-of-artery
-Inserting gene: ENSG00000120251
-Inserting edge from cell vertex with key: endothelial-cell-of-artery to gene vertex with key: ENSG00000120251
-Inserting gene: ENSG00000118137
-Inserting edge from cell vertex with key: endothelial-cell-of-artery to gene vertex with key: ENSG00000118137
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Inserting cell: erythroblast
-Inserting gene: ENSG00000164104
-Inserting edge from cell vertex with key: erythroblast to gene vertex with key: ENSG00000164104
-Inserting gene: ENSG00000065154
-Inserting edge from cell vertex with key: erythroblast to gene vertex with key: ENSG00000065154
-Inserting cell: erythrocyte
-Inserting gene: ENSG00000101782
-Inserting edge from cell vertex with key: erythrocyte to gene vertex with key: ENSG00000101782
-Inserting gene: ENSG00000173868
-Inserting edge from cell vertex with key: erythrocyte to gene vertex with key: ENSG00000173868
-Inserting cell: primitive-red-blood-cell
-Inserting gene: ENSG00000213931
-Inserting edge from cell vertex with key: primitive-red-blood-cell to gene vertex with key: ENSG00000213931
-Inserting cell: reticulocyte
-Inserting gene: ENSG00000130227
-Inserting edge from cell vertex with key: reticulocyte to gene vertex with key: ENSG00000130227
-Inserting gene: ENSG00000112212
-Inserting edge from cell vertex with key: reticulocyte to gene vertex with key: ENSG00000112212
-Inserting cell: vein-endothelial-cell
-Inserting gene: ENSG00000213088
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000213088
-Reading results file: ../data/nsforest-2024-06-27/2f132ec9-24b5-422f-9be0-ccef03b4fe28/cell_type_results.csv
-Updating cell: T-cell
-Inserting gene: ENSG00000141293
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000141293
-Inserting cell: club-cell
-Inserting gene: ENSG00000101752
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000101752
-Updating cell: endothelial-cell
-Updating gene: ENSG00000176435
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000176435
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Inserting cell: fibroblast-of-lung
-Inserting gene: ENSG00000185008
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000185008
-Inserting gene: ENSG00000145147
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000145147
-Inserting cell: lung-ciliated-cell
-Inserting gene: ENSG00000197826
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000197826
-Inserting gene: ENSG00000186094
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000186094
-Inserting cell: monocyte
-Inserting gene: ENSG00000038945
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000038945
-Inserting cell: type-I-pneumocyte
-Inserting gene: ENSG00000257894
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000257894
-Inserting gene: ENSG00000256013
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000256013
-Inserting cell: type-II-pneumocyte
-Inserting gene: ENSG00000078081
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000078081
-Inserting gene: ENSG00000152128
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000152128
-Reading results file: ../data/nsforest-2024-06-27/4b6af54a-4a21-46e0-bc8d-673c0561a836/cell_type_results.csv
-Inserting cell: ciliated-cell
-Inserting gene: ENSG00000178965
-Inserting edge from cell vertex with key: ciliated-cell to gene vertex with key: ENSG00000178965
-Inserting gene: ENSG00000174844
-Inserting edge from cell vertex with key: ciliated-cell to gene vertex with key: ENSG00000174844
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000110799
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000110799
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Inserting gene: ENSG00000117707
-Inserting edge from cell vertex with key: endothelial-cell-of-lymphatic-vessel to gene vertex with key: ENSG00000117707
-Inserting cell: epithelial-cell-of-lower-respiratory-tract
-Inserting gene: ENSG00000128422
-Inserting edge from cell vertex with key: epithelial-cell-of-lower-respiratory-tract to gene vertex with key: ENSG00000128422
-Updating cell: fibroblast
-Inserting gene: ENSG00000077942
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000077942
-Inserting gene: ENSG00000139329
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000139329
-Inserting cell: pericyte
-Inserting gene: ENSG00000131097
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000131097
-Inserting gene: ENSG00000050555
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000050555
-Inserting cell: smooth-muscle-cell
-Inserting gene: ENSG00000175084
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000175084
-Updating cell: type-I-pneumocyte
-Inserting gene: ENSG00000204305
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000204305
-Inserting gene: ENSG00000086548
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000086548
-Updating cell: type-II-pneumocyte
-Updating gene: ENSG00000078081
-Inserting gene: ENSG00000123838
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000123838
-Reading results file: ../data/nsforest-2024-06-27/1e5bd3b8-6a0e-4959-8d69-cafed30fe814/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000156738
-Inserting gene: ENSG00000153064
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000153064
-Updating cell: T-cell
-Updating gene: ENSG00000167286
-Inserting cell: alveolar-macrophage
-Inserting gene: ENSG00000130208
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000130208
-Inserting gene: ENSG00000019169
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000019169
-Inserting cell: dendritic-cell
-Inserting gene: ENSG00000120875
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000120875
-Inserting gene: ENSG00000165795
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000165795
-Inserting gene: ENSG00000269404
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000269404
-Inserting cell: macrophage
-Inserting gene: ENSG00000165457
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000165457
-Inserting gene: ENSG00000137491
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000137491
-Inserting cell: mast-cell
-Inserting gene: ENSG00000172236
-Inserting edge from cell vertex with key: mast-cell to gene vertex with key: ENSG00000172236
-Inserting gene: ENSG00000163751
-Inserting edge from cell vertex with key: mast-cell to gene vertex with key: ENSG00000163751
-Updating cell: monocyte
-Inserting gene: ENSG00000085265
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000085265
-Inserting gene: ENSG00000038427
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000038427
-Inserting cell: natural-killer-cell
-Inserting gene: ENSG00000115523
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000115523
-Inserting gene: ENSG00000159674
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000159674
-Inserting cell: plasma-cell
-Inserting gene: ENSG00000170476
-Inserting edge from cell vertex with key: plasma-cell to gene vertex with key: ENSG00000170476
-Inserting gene: ENSG00000099958
-Inserting edge from cell vertex with key: plasma-cell to gene vertex with key: ENSG00000099958
-Reading results file: ../data/nsforest-2024-06-27/2672b679-8048-4f5e-9786-f1b196ccfd08/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000156738
-Updating gene: ENSG00000105369
-Inserting cell: CD4-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000168685
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000168685
-Inserting gene: ENSG00000277734
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000277734
-Inserting cell: CD8-positive:-alpha-beta-cytotoxic-T-cell
-Inserting gene: ENSG00000100450
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-cytotoxic-T-cell to gene vertex with key: ENSG00000100450
-Updating cell: T-cell
-Inserting gene: ENSG00000160654
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000160654
-Updating gene: ENSG00000164104
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000164104
-Updating cell: blood-vessel-endothelial-cell
-Updating gene: ENSG00000110799
-Inserting edge from cell vertex with key: blood-vessel-endothelial-cell to gene vertex with key: ENSG00000110799
-Inserting cell: conventional-dendritic-cell
-Inserting gene: ENSG00000197992
-Inserting edge from cell vertex with key: conventional-dendritic-cell to gene vertex with key: ENSG00000197992
-Updating cell: dendritic-cell
-Inserting gene: ENSG00000158481
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000158481
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Inserting gene: ENSG00000138722
-Inserting edge from cell vertex with key: endothelial-cell-of-lymphatic-vessel to gene vertex with key: ENSG00000138722
-Updating cell: fibroblast
-Updating gene: ENSG00000077942
-Updating gene: ENSG00000011465
-Updating cell: lung-ciliated-cell
-Inserting gene: ENSG00000186973
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000186973
-Inserting gene: ENSG00000105519
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000105519
-Inserting cell: lung-macrophage
-Inserting gene: ENSG00000102575
-Inserting edge from cell vertex with key: lung-macrophage to gene vertex with key: ENSG00000102575
-Updating gene: ENSG00000130208
-Inserting edge from cell vertex with key: lung-macrophage to gene vertex with key: ENSG00000130208
-Updating cell: mast-cell
-Updating gene: ENSG00000172236
-Inserting gene: ENSG00000197253
-Inserting edge from cell vertex with key: mast-cell to gene vertex with key: ENSG00000197253
-Updating cell: monocyte
-Updating gene: ENSG00000085265
-Inserting gene: ENSG00000124882
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000124882
-Inserting cell: mononuclear-cell
-Inserting gene: ENSG00000178999
-Inserting edge from cell vertex with key: mononuclear-cell to gene vertex with key: ENSG00000178999
-Inserting gene: ENSG00000175063
-Inserting edge from cell vertex with key: mononuclear-cell to gene vertex with key: ENSG00000175063
-Inserting gene: ENSG00000148773
-Inserting edge from cell vertex with key: mononuclear-cell to gene vertex with key: ENSG00000148773
-Inserting cell: muscle-cell
-Inserting gene: ENSG00000163017
-Inserting edge from cell vertex with key: muscle-cell to gene vertex with key: ENSG00000163017
-Updating cell: natural-killer-cell
-Inserting gene: ENSG00000111796
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000111796
-Updating gene: ENSG00000115523
-Updating cell: plasma-cell
-Inserting gene: ENSG00000211895
-Inserting edge from cell vertex with key: plasma-cell to gene vertex with key: ENSG00000211895
-Inserting cell: plasmacytoid-dendritic-cell
-Inserting gene: ENSG00000239961
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell to gene vertex with key: ENSG00000239961
-Inserting gene: ENSG00000166428
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell to gene vertex with key: ENSG00000166428
-Inserting cell: pneumocyte
-Inserting gene: ENSG00000185303
-Inserting edge from cell vertex with key: pneumocyte to gene vertex with key: ENSG00000185303
-Inserting cell: regulatory-T-cell
-Inserting gene: ENSG00000181847
-Inserting edge from cell vertex with key: regulatory-T-cell to gene vertex with key: ENSG00000181847
-Inserting gene: ENSG00000156127
-Inserting edge from cell vertex with key: regulatory-T-cell to gene vertex with key: ENSG00000156127
-Reading results file: ../data/nsforest-2024-06-27/4ed927e9-c099-49af-b8ce-a2652d069333/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000156738
-Inserting cell: Schwann-cell
-Inserting gene: ENSG00000153902
-Inserting edge from cell vertex with key: Schwann-cell to gene vertex with key: ENSG00000153902
-Inserting gene: ENSG00000071991
-Inserting edge from cell vertex with key: Schwann-cell to gene vertex with key: ENSG00000071991
-Updating cell: T-cell
-Inserting gene: ENSG00000172673
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000172673
-Inserting cell: adipocyte
-Inserting gene: ENSG00000125740
-Inserting edge from cell vertex with key: adipocyte to gene vertex with key: ENSG00000125740
-Inserting gene: ENSG00000173432
-Inserting edge from cell vertex with key: adipocyte to gene vertex with key: ENSG00000173432
-Updating cell: alveolar-macrophage
-Inserting gene: ENSG00000173391
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000173391
-Reading results file: ../data/nsforest-2024-06-27/8c42cfd0-0b0a-46d5-910c-fc833d83c45e/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000156738
-Inserting gene: ENSG00000247982
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000247982
-Inserting cell: CD1c-positive-myeloid-dendritic-cell
-Updating gene: ENSG00000158481
-Inserting edge from cell vertex with key: CD1c-positive-myeloid-dendritic-cell to gene vertex with key: ENSG00000158481
-Updating gene: ENSG00000166428
-Inserting edge from cell vertex with key: CD1c-positive-myeloid-dendritic-cell to gene vertex with key: ENSG00000166428
-Updating cell: alveolar-macrophage
-Updating gene: ENSG00000019169
-Updating gene: ENSG00000038945
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000038945
-Inserting cell: basal-cell
-Inserting gene: ENSG00000057149
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000057149
-Inserting gene: ENSG00000196754
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000196754
-Inserting cell: bronchial-smooth-muscle-cell
-Inserting gene: ENSG00000118194
-Inserting edge from cell vertex with key: bronchial-smooth-muscle-cell to gene vertex with key: ENSG00000118194
-Updating gene: ENSG00000163017
-Inserting edge from cell vertex with key: bronchial-smooth-muscle-cell to gene vertex with key: ENSG00000163017
-Updating cell: capillary-endothelial-cell
-Updating gene: ENSG00000167434
-Inserting gene: ENSG00000142748
-Inserting edge from cell vertex with key: capillary-endothelial-cell to gene vertex with key: ENSG00000142748
-Updating cell: ciliated-cell
-Inserting gene: ENSG00000133328
-Inserting edge from cell vertex with key: ciliated-cell to gene vertex with key: ENSG00000133328
-Inserting gene: ENSG00000214514
-Inserting edge from cell vertex with key: ciliated-cell to gene vertex with key: ENSG00000214514
-Inserting gene: ENSG00000073737
-Inserting edge from cell vertex with key: ciliated-cell to gene vertex with key: ENSG00000073737
-Inserting cell: classical-monocyte
-Inserting gene: ENSG00000163221
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000163221
-Updating gene: ENSG00000085265
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000085265
-Updating cell: club-cell
-Inserting gene: ENSG00000164265
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000164265
-Updating cell: dendritic-cell
-Updating gene: ENSG00000165457
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000165457
-Inserting cell: effector-memory-CD4-positive:-alpha-beta-T-cell
-Updating gene: ENSG00000167286
-Inserting edge from cell vertex with key: effector-memory-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000167286
-Inserting gene: ENSG00000227507
-Inserting edge from cell vertex with key: effector-memory-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000227507
-Inserting gene: ENSG00000116824
-Inserting edge from cell vertex with key: effector-memory-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000116824
-Inserting cell: effector-memory-CD8-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000113088
-Inserting edge from cell vertex with key: effector-memory-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000113088
-Updating gene: ENSG00000167286
-Inserting edge from cell vertex with key: effector-memory-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000167286
-Inserting gene: ENSG00000158050
-Inserting edge from cell vertex with key: effector-memory-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000158050
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000136160
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000136160
-Inserting gene: ENSG00000164035
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000164035
-Updating cell: endothelial-cell-of-artery
-Inserting gene: ENSG00000155011
-Inserting edge from cell vertex with key: endothelial-cell-of-artery to gene vertex with key: ENSG00000155011
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Updating cell: epithelial-cell
-Inserting gene: ENSG00000131400
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000131400
-Inserting gene: ENSG00000122852
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000122852
-Inserting gene: ENSG00000157765
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000157765
-Inserting gene: ENSG00000106992
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000106992
-Updating cell: fibroblast
-Updating gene: ENSG00000139329
-Updating gene: ENSG00000077942
-Inserting cell: intermediate-monocyte
-Inserting gene: ENSG00000128383
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000128383
-Inserting gene: ENSG00000127507
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000127507
-Inserting gene: ENSG00000125538
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000125538
-Inserting gene: ENSG00000131042
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000131042
-Inserting gene: ENSG00000137193
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000137193
-Updating cell: lung-ciliated-cell
-Inserting gene: ENSG00000164972
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000164972
-Inserting cell: lung-goblet-cell
-Inserting gene: ENSG00000163993
-Inserting edge from cell vertex with key: lung-goblet-cell to gene vertex with key: ENSG00000163993
-Inserting gene: ENSG00000198643
-Inserting edge from cell vertex with key: lung-goblet-cell to gene vertex with key: ENSG00000198643
-Inserting cell: lung-neuroendocrine-cell
-Inserting gene: ENSG00000100604
-Inserting edge from cell vertex with key: lung-neuroendocrine-cell to gene vertex with key: ENSG00000100604
-Inserting gene: ENSG00000166922
-Inserting edge from cell vertex with key: lung-neuroendocrine-cell to gene vertex with key: ENSG00000166922
-Inserting cell: lymphocyte
-Inserting gene: ENSG00000146670
-Inserting edge from cell vertex with key: lymphocyte to gene vertex with key: ENSG00000146670
-Updating gene: ENSG00000148773
-Inserting edge from cell vertex with key: lymphocyte to gene vertex with key: ENSG00000148773
-Updating cell: macrophage
-Inserting gene: ENSG00000109805
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000109805
-Inserting gene: ENSG00000138180
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000138180
-Inserting gene: ENSG00000170312
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000170312
-Inserting cell: mature-NK-T-cell
-Inserting gene: ENSG00000176083
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000176083
-Inserting gene: ENSG00000205809
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000205809
-Inserting cell: megakaryocyte
-Inserting gene: ENSG00000101162
-Inserting edge from cell vertex with key: megakaryocyte to gene vertex with key: ENSG00000101162
-Inserting cell: mesothelial-cell-of-pleura
-Inserting gene: ENSG00000128510
-Inserting edge from cell vertex with key: mesothelial-cell-of-pleura to gene vertex with key: ENSG00000128510
-Inserting gene: ENSG00000116690
-Inserting edge from cell vertex with key: mesothelial-cell-of-pleura to gene vertex with key: ENSG00000116690
-Updating cell: monocyte
-Updating gene: ENSG00000125538
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000125538
-Inserting gene: ENSG00000133657
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000133657
-Inserting cell: mucus-secreting-cell
-Inserting gene: ENSG00000134339
-Inserting edge from cell vertex with key: mucus-secreting-cell to gene vertex with key: ENSG00000134339
-Inserting gene: ENSG00000181458
-Inserting edge from cell vertex with key: mucus-secreting-cell to gene vertex with key: ENSG00000181458
-Inserting cell: myeloid-dendritic-cell:-human
-Inserting gene: ENSG00000131203
-Inserting edge from cell vertex with key: myeloid-dendritic-cell:-human to gene vertex with key: ENSG00000131203
-Updating gene: ENSG00000120875
-Inserting edge from cell vertex with key: myeloid-dendritic-cell:-human to gene vertex with key: ENSG00000120875
-Inserting gene: ENSG00000100079
-Inserting edge from cell vertex with key: myeloid-dendritic-cell:-human to gene vertex with key: ENSG00000100079
-Inserting cell: myeloid-leukocyte
-Updating gene: ENSG00000172236
-Inserting edge from cell vertex with key: myeloid-leukocyte to gene vertex with key: ENSG00000172236
-Updating gene: ENSG00000197253
-Inserting edge from cell vertex with key: myeloid-leukocyte to gene vertex with key: ENSG00000197253
-Inserting cell: myofibroblast-cell
-Inserting gene: ENSG00000106819
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000106819
-Inserting gene: ENSG00000168077
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000168077
-Inserting cell: naive-thymus-derived-CD4-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000126353
-Inserting edge from cell vertex with key: naive-thymus-derived-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000126353
-Inserting gene: ENSG00000237943
-Inserting edge from cell vertex with key: naive-thymus-derived-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000237943
-Updating gene: ENSG00000227507
-Inserting edge from cell vertex with key: naive-thymus-derived-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000227507
-Inserting cell: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell
-Updating gene: ENSG00000100450
-Inserting edge from cell vertex with key: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000100450
-Updating gene: ENSG00000167286
-Inserting edge from cell vertex with key: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000167286
-Updating gene: ENSG00000115523
-Inserting edge from cell vertex with key: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000115523
-Inserting gene: ENSG00000105374
-Inserting edge from cell vertex with key: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000105374
-Updating cell: natural-killer-cell
-Updating gene: ENSG00000159674
-Updating gene: ENSG00000111796
-Inserting cell: non-classical-monocyte
-Inserting gene: ENSG00000129757
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000129757
-Updating gene: ENSG00000131042
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000131042
-Updating cell: pericyte
-Inserting gene: ENSG00000185633
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000185633
-Inserting gene: ENSG00000183807
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000183807
-Updating cell: plasma-cell
-Inserting gene: ENSG00000132465
-Inserting edge from cell vertex with key: plasma-cell to gene vertex with key: ENSG00000132465
-Inserting cell: plasmacytoid-dendritic-cell:-human
-Inserting gene: ENSG00000070031
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell:-human to gene vertex with key: ENSG00000070031
-Updating gene: ENSG00000269404
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell:-human to gene vertex with key: ENSG00000269404
-Inserting cell: pulmonary-interstitial-fibroblast
-Inserting gene: ENSG00000134363
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000134363
-Inserting gene: ENSG00000184937
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000184937
-Inserting cell: pulmonary-ionocyte
-Inserting gene: ENSG00000176009
-Inserting edge from cell vertex with key: pulmonary-ionocyte to gene vertex with key: ENSG00000176009
-Inserting gene: ENSG00000151418
-Inserting edge from cell vertex with key: pulmonary-ionocyte to gene vertex with key: ENSG00000151418
-Inserting cell: respiratory-basal-cell
-Updating gene: ENSG00000128422
-Inserting edge from cell vertex with key: respiratory-basal-cell to gene vertex with key: ENSG00000128422
-Inserting gene: ENSG00000230937
-Inserting edge from cell vertex with key: respiratory-basal-cell to gene vertex with key: ENSG00000230937
-Inserting cell: tracheobronchial-serous-cell
-Inserting gene: ENSG00000111215
-Inserting edge from cell vertex with key: tracheobronchial-serous-cell to gene vertex with key: ENSG00000111215
-Updating cell: type-I-pneumocyte
-Updating gene: ENSG00000204305
-Updating cell: type-II-pneumocyte
-Inserting gene: ENSG00000096088
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000096088
-Inserting gene: ENSG00000156076
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000156076
-Inserting cell: vascular-associated-smooth-muscle-cell
-Inserting gene: ENSG00000107796
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000107796
-Inserting gene: ENSG00000119147
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000119147
-Updating cell: vein-endothelial-cell
-Updating gene: ENSG00000213088
-Inserting gene: ENSG00000124212
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000124212
-Reading results file: ../data/nsforest-2024-06-27/3dc61ca1-ce40-46b6-8337-f27260fd9a03/cell_type_results.csv
-Inserting cell: B-1a-B-cell
-Inserting gene: ENSG00000240505
-Inserting edge from cell vertex with key: B-1a-B-cell to gene vertex with key: ENSG00000240505
-Inserting gene: ENSG00000132704
-Inserting edge from cell vertex with key: B-1a-B-cell to gene vertex with key: ENSG00000132704
-Inserting cell: B-1b-B-cell
-Inserting gene: ENSG00000160683
-Inserting edge from cell vertex with key: B-1b-B-cell to gene vertex with key: ENSG00000160683
-Updating gene: ENSG00000153064
-Inserting edge from cell vertex with key: B-1b-B-cell to gene vertex with key: ENSG00000153064
-Inserting cell: CD16-negative:-CD56-bright-natural-killer-cell:-human
-Updating gene: ENSG00000113088
-Inserting edge from cell vertex with key: CD16-negative:-CD56-bright-natural-killer-cell:-human to gene vertex with key: ENSG00000113088
-Inserting gene: ENSG00000100385
-Inserting edge from cell vertex with key: CD16-negative:-CD56-bright-natural-killer-cell:-human to gene vertex with key: ENSG00000100385
-Inserting cell: CD16-positive:-CD56-dim-natural-killer-cell:-human
-Inserting gene: ENSG00000167618
-Inserting edge from cell vertex with key: CD16-positive:-CD56-dim-natural-killer-cell:-human to gene vertex with key: ENSG00000167618
-Inserting gene: ENSG00000137441
-Inserting edge from cell vertex with key: CD16-positive:-CD56-dim-natural-killer-cell:-human to gene vertex with key: ENSG00000137441
-Updating gene: ENSG00000100450
-Inserting edge from cell vertex with key: CD16-positive:-CD56-dim-natural-killer-cell:-human to gene vertex with key: ENSG00000100450
-Inserting cell: CD34-positive:-CD56-positive:-CD117-positive-common-innate-lymphoid-precursor:-human
-Inserting gene: ENSG00000236790
-Inserting edge from cell vertex with key: CD34-positive:-CD56-positive:-CD117-positive-common-innate-lymphoid-precursor:-human to gene vertex with key: ENSG00000236790
-Inserting gene: ENSG00000104951
-Inserting edge from cell vertex with key: CD34-positive:-CD56-positive:-CD117-positive-common-innate-lymphoid-precursor:-human to gene vertex with key: ENSG00000104951
-Updating cell: CD4-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000102245
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000102245
-Updating gene: ENSG00000126353
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000126353
-Inserting cell: CD8-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000256039
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000256039
-Inserting gene: ENSG00000172116
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000172116
-Updating cell: Schwann-cell
-Inserting gene: ENSG00000146013
-Inserting edge from cell vertex with key: Schwann-cell to gene vertex with key: ENSG00000146013
-Updating gene: ENSG00000071991
-Inserting cell: Schwann-cell-precursor
-Inserting gene: ENSG00000231817
-Inserting edge from cell vertex with key: Schwann-cell-precursor to gene vertex with key: ENSG00000231817
-Inserting gene: ENSG00000188487
-Inserting edge from cell vertex with key: Schwann-cell-precursor to gene vertex with key: ENSG00000188487
-Updating cell: T-cell
-Inserting gene: ENSG00000127564
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000127564
-Inserting gene: ENSG00000064886
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000064886
-Inserting gene: ENSG00000013725
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000013725
-Inserting cell: T-helper-17-cell
-Inserting gene: ENSG00000117090
-Inserting edge from cell vertex with key: T-helper-17-cell to gene vertex with key: ENSG00000117090
-Inserting gene: ENSG00000204475
-Inserting edge from cell vertex with key: T-helper-17-cell to gene vertex with key: ENSG00000204475
-Updating gene: ENSG00000168685
-Inserting edge from cell vertex with key: T-helper-17-cell to gene vertex with key: ENSG00000168685
-Updating cell: basal-cell
-Inserting gene: ENSG00000186081
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000186081
-Inserting cell: basophil
-Inserting gene: ENSG00000105205
-Inserting edge from cell vertex with key: basophil to gene vertex with key: ENSG00000105205
-Inserting gene: ENSG00000169224
-Inserting edge from cell vertex with key: basophil to gene vertex with key: ENSG00000169224
-Inserting cell: bone-marrow-cell
-Inserting gene: ENSG00000164047
-Inserting edge from cell vertex with key: bone-marrow-cell to gene vertex with key: ENSG00000164047
-Inserting cell: bronchus-fibroblast-of-lung
-Inserting gene: ENSG00000125378
-Inserting edge from cell vertex with key: bronchus-fibroblast-of-lung to gene vertex with key: ENSG00000125378
-Inserting gene: ENSG00000145824
-Inserting edge from cell vertex with key: bronchus-fibroblast-of-lung to gene vertex with key: ENSG00000145824
-Updating cell: capillary-endothelial-cell
-Updating gene: ENSG00000167434
-Inserting gene: ENSG00000164120
-Inserting edge from cell vertex with key: capillary-endothelial-cell to gene vertex with key: ENSG00000164120
-Inserting cell: chondrocyte
-Inserting gene: ENSG00000124159
-Inserting edge from cell vertex with key: chondrocyte to gene vertex with key: ENSG00000124159
-Inserting gene: ENSG00000049089
-Inserting edge from cell vertex with key: chondrocyte to gene vertex with key: ENSG00000049089
-Updating cell: classical-monocyte
-Inserting gene: ENSG00000170458
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000170458
-Inserting gene: ENSG00000143546
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000143546
-Updating cell: club-cell
-Inserting gene: ENSG00000094963
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000094963
-Inserting gene: ENSG00000047457
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000047457
-Inserting cell: common-myeloid-progenitor
-Inserting gene: ENSG00000170893
-Inserting edge from cell vertex with key: common-myeloid-progenitor to gene vertex with key: ENSG00000170893
-Inserting gene: ENSG00000185559
-Inserting edge from cell vertex with key: common-myeloid-progenitor to gene vertex with key: ENSG00000185559
-Updating cell: dendritic-cell
-Updating gene: ENSG00000100079
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000100079
-Inserting gene: ENSG00000196735
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000196735
-Inserting cell: dendritic-cell:-human
-Inserting gene: ENSG00000132514
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000132514
-Updating gene: ENSG00000158481
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000158481
-Inserting gene: ENSG00000169385
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000169385
-Updating gene: ENSG00000143546
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000143546
-Inserting gene: ENSG00000090382
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000090382
-Inserting cell: early-lymphoid-progenitor
-Inserting gene: ENSG00000275896
-Inserting edge from cell vertex with key: early-lymphoid-progenitor to gene vertex with key: ENSG00000275896
-Inserting gene: ENSG00000128040
-Inserting edge from cell vertex with key: early-lymphoid-progenitor to gene vertex with key: ENSG00000128040
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000137573
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000137573
-Updating gene: ENSG00000155011
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000155011
-Updating cell: endothelial-cell-of-artery
-Inserting gene: ENSG00000187513
-Inserting edge from cell vertex with key: endothelial-cell-of-artery to gene vertex with key: ENSG00000187513
-Inserting gene: ENSG00000241404
-Inserting edge from cell vertex with key: endothelial-cell-of-artery to gene vertex with key: ENSG00000241404
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Inserting cell: eosinophil
-Inserting gene: ENSG00000121053
-Inserting edge from cell vertex with key: eosinophil to gene vertex with key: ENSG00000121053
-Inserting gene: ENSG00000267272
-Inserting edge from cell vertex with key: eosinophil to gene vertex with key: ENSG00000267272
-Inserting cell: epithelial-cell-of-lung
-Inserting gene: ENSG00000111907
-Inserting edge from cell vertex with key: epithelial-cell-of-lung to gene vertex with key: ENSG00000111907
-Inserting gene: ENSG00000244405
-Inserting edge from cell vertex with key: epithelial-cell-of-lung to gene vertex with key: ENSG00000244405
-Updating cell: erythroblast
-Inserting gene: ENSG00000169877
-Inserting edge from cell vertex with key: erythroblast to gene vertex with key: ENSG00000169877
-Updating cell: erythrocyte
-Inserting gene: ENSG00000244734
-Inserting edge from cell vertex with key: erythrocyte to gene vertex with key: ENSG00000244734
-Inserting gene: ENSG00000206172
-Inserting edge from cell vertex with key: erythrocyte to gene vertex with key: ENSG00000206172
-Updating cell: fibroblast-of-lung
-Inserting gene: ENSG00000109193
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000109193
-Inserting gene: ENSG00000129009
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000129009
-Inserting cell: granulocyte-monocyte-progenitor-cell
-Inserting gene: ENSG00000196415
-Inserting edge from cell vertex with key: granulocyte-monocyte-progenitor-cell to gene vertex with key: ENSG00000196415
-Inserting gene: ENSG00000172232
-Inserting edge from cell vertex with key: granulocyte-monocyte-progenitor-cell to gene vertex with key: ENSG00000172232
-Inserting gene: ENSG00000005381
-Inserting edge from cell vertex with key: granulocyte-monocyte-progenitor-cell to gene vertex with key: ENSG00000005381
-Inserting cell: group-2-innate-lymphoid-cell
-Inserting gene: ENSG00000183134
-Inserting edge from cell vertex with key: group-2-innate-lymphoid-cell to gene vertex with key: ENSG00000183134
-Inserting cell: group-3-innate-lymphoid-cell
-Inserting gene: ENSG00000162594
-Inserting edge from cell vertex with key: group-3-innate-lymphoid-cell to gene vertex with key: ENSG00000162594
-Updating gene: ENSG00000104951
-Inserting edge from cell vertex with key: group-3-innate-lymphoid-cell to gene vertex with key: ENSG00000104951
-Inserting gene: ENSG00000211829
-Inserting edge from cell vertex with key: group-3-innate-lymphoid-cell to gene vertex with key: ENSG00000211829
-Inserting cell: hematopoietic-stem-cell
-Inserting gene: ENSG00000183691
-Inserting edge from cell vertex with key: hematopoietic-stem-cell to gene vertex with key: ENSG00000183691
-Inserting gene: ENSG00000095932
-Inserting edge from cell vertex with key: hematopoietic-stem-cell to gene vertex with key: ENSG00000095932
-Inserting cell: immature-B-cell
-Updating gene: ENSG00000156738
-Inserting edge from cell vertex with key: immature-B-cell to gene vertex with key: ENSG00000156738
-Inserting gene: ENSG00000162144
-Inserting edge from cell vertex with key: immature-B-cell to gene vertex with key: ENSG00000162144
-Inserting gene: ENSG00000100721
-Inserting edge from cell vertex with key: immature-B-cell to gene vertex with key: ENSG00000100721
-Inserting cell: immature-Schwann-cell
-Inserting gene: ENSG00000101198
-Inserting edge from cell vertex with key: immature-Schwann-cell to gene vertex with key: ENSG00000101198
-Inserting gene: ENSG00000237125
-Inserting edge from cell vertex with key: immature-Schwann-cell to gene vertex with key: ENSG00000237125
-Inserting cell: large-pre-B-II-cell
-Inserting gene: ENSG00000089685
-Inserting edge from cell vertex with key: large-pre-B-II-cell to gene vertex with key: ENSG00000089685
-Inserting gene: ENSG00000128322
-Inserting edge from cell vertex with key: large-pre-B-II-cell to gene vertex with key: ENSG00000128322
-Inserting cell: late-pro-B-cell
-Inserting gene: ENSG00000228495
-Inserting edge from cell vertex with key: late-pro-B-cell to gene vertex with key: ENSG00000228495
-Inserting gene: ENSG00000107447
-Inserting edge from cell vertex with key: late-pro-B-cell to gene vertex with key: ENSG00000107447
-Updating cell: lung-ciliated-cell
-Inserting gene: ENSG00000160188
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000160188
-Inserting gene: ENSG00000124237
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000124237
-Updating cell: lung-neuroendocrine-cell
-Inserting gene: ENSG00000188175
-Inserting edge from cell vertex with key: lung-neuroendocrine-cell to gene vertex with key: ENSG00000188175
-Inserting gene: ENSG00000173826
-Inserting edge from cell vertex with key: lung-neuroendocrine-cell to gene vertex with key: ENSG00000173826
-Inserting cell: lung-secretory-cell
-Inserting gene: ENSG00000161055
-Inserting edge from cell vertex with key: lung-secretory-cell to gene vertex with key: ENSG00000161055
-Updating cell: macrophage
-Inserting gene: ENSG00000159189
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000159189
-Inserting gene: ENSG00000173372
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000173372
-Updating gene: ENSG00000165457
-Updating cell: mast-cell
-Updating gene: ENSG00000197253
-Updating cell: mature-NK-T-cell
-Inserting gene: ENSG00000143184
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000143184
-Updating gene: ENSG00000013725
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000013725
-Inserting gene: ENSG00000139193
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000139193
-Updating cell: megakaryocyte
-Inserting gene: ENSG00000163737
-Inserting edge from cell vertex with key: megakaryocyte to gene vertex with key: ENSG00000163737
-Inserting gene: ENSG00000169704
-Inserting edge from cell vertex with key: megakaryocyte to gene vertex with key: ENSG00000169704
-Inserting cell: megakaryocyte-erythroid-progenitor-cell
-Inserting gene: ENSG00000168754
-Inserting edge from cell vertex with key: megakaryocyte-erythroid-progenitor-cell to gene vertex with key: ENSG00000168754
-Updating gene: ENSG00000130208
-Inserting edge from cell vertex with key: megakaryocyte-erythroid-progenitor-cell to gene vertex with key: ENSG00000130208
-Inserting cell: mesenchymal-cell
-Inserting gene: ENSG00000164093
-Inserting edge from cell vertex with key: mesenchymal-cell to gene vertex with key: ENSG00000164093
-Inserting gene: ENSG00000118004
-Inserting edge from cell vertex with key: mesenchymal-cell to gene vertex with key: ENSG00000118004
-Inserting cell: mesothelial-cell
-Inserting gene: ENSG00000105048
-Inserting edge from cell vertex with key: mesothelial-cell to gene vertex with key: ENSG00000105048
-Updating gene: ENSG00000184937
-Inserting edge from cell vertex with key: mesothelial-cell to gene vertex with key: ENSG00000184937
-Updating cell: myofibroblast-cell
-Inserting gene: ENSG00000269096
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000269096
-Inserting gene: ENSG00000124780
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000124780
-Updating cell: natural-killer-cell
-Updating gene: ENSG00000115523
-Inserting gene: ENSG00000143185
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000143185
-Inserting cell: neural-progenitor-cell
-Inserting gene: ENSG00000069482
-Inserting edge from cell vertex with key: neural-progenitor-cell to gene vertex with key: ENSG00000069482
-Inserting cell: neuron
-Inserting gene: ENSG00000104435
-Inserting edge from cell vertex with key: neuron to gene vertex with key: ENSG00000104435
-Inserting gene: ENSG00000165462
-Inserting edge from cell vertex with key: neuron to gene vertex with key: ENSG00000165462
-Updating cell: neutrophil
-Inserting gene: ENSG00000229314
-Inserting edge from cell vertex with key: neutrophil to gene vertex with key: ENSG00000229314
-Inserting gene: ENSG00000171051
-Inserting edge from cell vertex with key: neutrophil to gene vertex with key: ENSG00000171051
-Updating cell: non-classical-monocyte
-Inserting gene: ENSG00000203747
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000203747
-Inserting gene: ENSG00000197249
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000197249
-Inserting gene: ENSG00000025708
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000025708
-Updating cell: pericyte
-Updating gene: ENSG00000185633
-Inserting gene: ENSG00000131055
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000131055
-Updating cell: plasmacytoid-dendritic-cell
-Inserting gene: ENSG00000185507
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell to gene vertex with key: ENSG00000185507
-Inserting cell: platelet
-Inserting gene: ENSG00000112242
-Inserting edge from cell vertex with key: platelet to gene vertex with key: ENSG00000112242
-Inserting cell: pre-B-I-cell
-Inserting gene: ENSG00000107902
-Inserting edge from cell vertex with key: pre-B-I-cell to gene vertex with key: ENSG00000107902
-Inserting gene: ENSG00000234184
-Inserting edge from cell vertex with key: pre-B-I-cell to gene vertex with key: ENSG00000234184
-Inserting cell: precursor-B-cell
-Inserting gene: ENSG00000132185
-Inserting edge from cell vertex with key: precursor-B-cell to gene vertex with key: ENSG00000132185
-Inserting gene: ENSG00000137101
-Inserting edge from cell vertex with key: precursor-B-cell to gene vertex with key: ENSG00000137101
-Updating cell: primitive-red-blood-cell
-Updating gene: ENSG00000213931
-Inserting cell: pro-B-cell
-Updating gene: ENSG00000107447
-Inserting edge from cell vertex with key: pro-B-cell to gene vertex with key: ENSG00000107447
-Inserting gene: ENSG00000122952
-Inserting edge from cell vertex with key: pro-B-cell to gene vertex with key: ENSG00000122952
-Inserting cell: promonocyte
-Updating gene: ENSG00000169385
-Inserting edge from cell vertex with key: promonocyte to gene vertex with key: ENSG00000169385
-Updating gene: ENSG00000175063
-Inserting edge from cell vertex with key: promonocyte to gene vertex with key: ENSG00000175063
-Inserting cell: promyelocyte
-Updating gene: ENSG00000196415
-Inserting edge from cell vertex with key: promyelocyte to gene vertex with key: ENSG00000196415
-Updating gene: ENSG00000005381
-Inserting edge from cell vertex with key: promyelocyte to gene vertex with key: ENSG00000005381
-Updating cell: pulmonary-interstitial-fibroblast
-Inserting gene: ENSG00000160867
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000160867
-Inserting gene: ENSG00000196616
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000196616
-Updating cell: regulatory-T-cell
-Inserting gene: ENSG00000049768
-Inserting edge from cell vertex with key: regulatory-T-cell to gene vertex with key: ENSG00000049768
-Updating gene: ENSG00000181847
-Inserting cell: respiratory-epithelial-cell
-Updating gene: ENSG00000164265
-Inserting edge from cell vertex with key: respiratory-epithelial-cell to gene vertex with key: ENSG00000164265
-Inserting gene: ENSG00000184697
-Inserting edge from cell vertex with key: respiratory-epithelial-cell to gene vertex with key: ENSG00000184697
-Inserting gene: ENSG00000130513
-Inserting edge from cell vertex with key: respiratory-epithelial-cell to gene vertex with key: ENSG00000130513
-Updating cell: reticulocyte
-Updating gene: ENSG00000112212
-Inserting gene: ENSG00000112077
-Inserting edge from cell vertex with key: reticulocyte to gene vertex with key: ENSG00000112077
-Updating gene: ENSG00000244734
-Inserting edge from cell vertex with key: reticulocyte to gene vertex with key: ENSG00000244734
-Inserting cell: small-pre-B-II-cell
-Inserting gene: ENSG00000048462
-Inserting edge from cell vertex with key: small-pre-B-II-cell to gene vertex with key: ENSG00000048462
-Inserting gene: ENSG00000258572
-Inserting edge from cell vertex with key: small-pre-B-II-cell to gene vertex with key: ENSG00000258572
-Updating cell: smooth-muscle-cell
-Updating gene: ENSG00000118194
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000118194
-Updating gene: ENSG00000134363
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000134363
-Inserting cell: squamous-epithelial-cell
-Inserting gene: ENSG00000170423
-Inserting edge from cell vertex with key: squamous-epithelial-cell to gene vertex with key: ENSG00000170423
-Inserting cell: thymocyte
-Inserting gene: ENSG00000158488
-Inserting edge from cell vertex with key: thymocyte to gene vertex with key: ENSG00000158488
-Inserting gene: ENSG00000173585
-Inserting edge from cell vertex with key: thymocyte to gene vertex with key: ENSG00000173585
-Inserting cell: tracheobronchial-smooth-muscle-cell
-Inserting gene: ENSG00000164161
-Inserting edge from cell vertex with key: tracheobronchial-smooth-muscle-cell to gene vertex with key: ENSG00000164161
-Updating gene: ENSG00000163017
-Inserting edge from cell vertex with key: tracheobronchial-smooth-muscle-cell to gene vertex with key: ENSG00000163017
-Updating cell: type-I-pneumocyte
-Updating gene: ENSG00000204305
-Updating cell: type-II-pneumocyte
-Inserting gene: ENSG00000168484
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000168484
-Inserting gene: ENSG00000230368
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000230368
-Updating gene: ENSG00000157765
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000157765
-Updating cell: vascular-associated-smooth-muscle-cell
-Inserting gene: ENSG00000074527
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000074527
-Inserting gene: ENSG00000198759
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000198759
-Updating cell: vein-endothelial-cell
-Updating gene: ENSG00000213088
-Reading results file: ../data/nsforest-2024-06-27/01209dce-3575-4bed-b1df-129f57fbc031/cell_type_results.csv
-Updating cell: CD4-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000186827
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000186827
-Inserting cell: CD4-positive:-alpha-beta-thymocyte
-Inserting gene: ENSG00000185862
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-thymocyte to gene vertex with key: ENSG00000185862
-Updating gene: ENSG00000126353
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-thymocyte to gene vertex with key: ENSG00000126353
-Updating cell: CD8-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000100453
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000100453
-Inserting gene: ENSG00000089692
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000089692
-Inserting cell: CD8-positive:-alpha-beta-thymocyte
-Inserting gene: ENSG00000145220
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-thymocyte to gene vertex with key: ENSG00000145220
-Inserting gene: ENSG00000271503
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-thymocyte to gene vertex with key: ENSG00000271503
-Reading results file: ../data/nsforest-2024-06-27/0ba16f4b-cb87-4fa3-9363-19fc51eec6e7/cell_type_results.csv
-Updating cell: basophil
-Inserting gene: ENSG00000133101
-Inserting edge from cell vertex with key: basophil to gene vertex with key: ENSG00000133101
-Updating cell: bone-marrow-cell
-Inserting gene: ENSG00000148346
-Inserting edge from cell vertex with key: bone-marrow-cell to gene vertex with key: ENSG00000148346
-Updating cell: classical-monocyte
-Inserting gene: ENSG00000162444
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000162444
-Inserting gene: ENSG00000141505
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000141505
-Updating cell: common-myeloid-progenitor
-Updating gene: ENSG00000185559
-Updating gene: ENSG00000170893
-Updating cell: dendritic-cell
-Inserting gene: ENSG00000179639
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000179639
-Updating gene: ENSG00000158481
-Updating cell: dendritic-cell:-human
-Updating gene: ENSG00000158481
-Updating gene: ENSG00000132514
-Inserting gene: ENSG00000172322
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000172322
-Inserting gene: ENSG00000109743
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000109743
-Updating cell: early-lymphoid-progenitor
-Inserting gene: ENSG00000197301
-Inserting edge from cell vertex with key: early-lymphoid-progenitor to gene vertex with key: ENSG00000197301
-Inserting gene: ENSG00000171476
-Inserting edge from cell vertex with key: early-lymphoid-progenitor to gene vertex with key: ENSG00000171476
-Updating cell: eosinophil
-Updating gene: ENSG00000172236
-Inserting edge from cell vertex with key: eosinophil to gene vertex with key: ENSG00000172236
-Updating gene: ENSG00000211829
-Inserting edge from cell vertex with key: eosinophil to gene vertex with key: ENSG00000211829
-Updating cell: granulocyte-monocyte-progenitor-cell
-Updating gene: ENSG00000196415
-Updating gene: ENSG00000172232
-Updating cell: hematopoietic-stem-cell
-Inserting gene: ENSG00000246627
-Inserting edge from cell vertex with key: hematopoietic-stem-cell to gene vertex with key: ENSG00000246627
-Updating gene: ENSG00000183691
-Updating cell: macrophage
-Updating gene: ENSG00000159189
-Inserting gene: ENSG00000129538
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000129538
-Updating cell: megakaryocyte
-Updating gene: ENSG00000163737
-Inserting gene: ENSG00000005961
-Inserting edge from cell vertex with key: megakaryocyte to gene vertex with key: ENSG00000005961
-Updating cell: megakaryocyte-erythroid-progenitor-cell
-Inserting gene: ENSG00000105610
-Inserting edge from cell vertex with key: megakaryocyte-erythroid-progenitor-cell to gene vertex with key: ENSG00000105610
-Inserting gene: ENSG00000186603
-Inserting edge from cell vertex with key: megakaryocyte-erythroid-progenitor-cell to gene vertex with key: ENSG00000186603
-Updating cell: neutrophil
-Updating gene: ENSG00000162747
-Updating gene: ENSG00000171051
-Updating cell: non-classical-monocyte
-Updating gene: ENSG00000203747
-Inserting gene: ENSG00000224397
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000224397
-Updating cell: plasmacytoid-dendritic-cell
-Updating gene: ENSG00000100453
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell to gene vertex with key: ENSG00000100453
-Updating gene: ENSG00000132465
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell to gene vertex with key: ENSG00000132465
-Updating cell: platelet
-Inserting gene: ENSG00000158406
-Inserting edge from cell vertex with key: platelet to gene vertex with key: ENSG00000158406
-Updating cell: promonocyte
-Inserting gene: ENSG00000257764
-Inserting edge from cell vertex with key: promonocyte to gene vertex with key: ENSG00000257764
-Updating gene: ENSG00000148773
-Inserting edge from cell vertex with key: promonocyte to gene vertex with key: ENSG00000148773
-Updating gene: ENSG00000089685
-Inserting edge from cell vertex with key: promonocyte to gene vertex with key: ENSG00000089685
-Updating cell: promyelocyte
-Updating gene: ENSG00000172232
-Inserting edge from cell vertex with key: promyelocyte to gene vertex with key: ENSG00000172232
-Updating gene: ENSG00000005381
-Reading results file: ../data/nsforest-2024-06-27/e04daea4-4412-45b5-989e-76a9be070a89/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000156738
-Inserting gene: ENSG00000159958
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000159958
-Updating cell: CD1c-positive-myeloid-dendritic-cell
-Inserting gene: ENSG00000135077
-Inserting edge from cell vertex with key: CD1c-positive-myeloid-dendritic-cell to gene vertex with key: ENSG00000135077
-Inserting gene: ENSG00000169413
-Inserting edge from cell vertex with key: CD1c-positive-myeloid-dendritic-cell to gene vertex with key: ENSG00000169413
-Updating cell: alveolar-macrophage
-Inserting gene: ENSG00000183019
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000183019
-Updating gene: ENSG00000159189
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000159189
-Updating cell: basal-cell
-Updating gene: ENSG00000057149
-Inserting gene: ENSG00000206073
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000206073
-Inserting gene: ENSG00000137975
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000137975
-Updating cell: bronchial-smooth-muscle-cell
-Updating gene: ENSG00000118194
-Inserting gene: ENSG00000018625
-Inserting edge from cell vertex with key: bronchial-smooth-muscle-cell to gene vertex with key: ENSG00000018625
-Updating cell: capillary-endothelial-cell
-Updating gene: ENSG00000142748
-Inserting gene: ENSG00000078401
-Inserting edge from cell vertex with key: capillary-endothelial-cell to gene vertex with key: ENSG00000078401
-Updating cell: classical-monocyte
-Updating gene: ENSG00000085265
-Updating gene: ENSG00000038427
-Inserting edge from cell vertex with key: classical-monocyte to gene vertex with key: ENSG00000038427
-Updating cell: club-cell
-Inserting gene: ENSG00000196188
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000196188
-Updating gene: ENSG00000164265
-Updating cell: dendritic-cell
-Updating gene: ENSG00000165457
-Inserting gene: ENSG00000168546
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000168546
-Updating cell: dendritic-cell:-human
-Updating gene: ENSG00000104951
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000104951
-Inserting gene: ENSG00000105383
-Inserting edge from cell vertex with key: dendritic-cell:-human to gene vertex with key: ENSG00000105383
-Updating cell: effector-memory-CD4-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000109452
-Inserting edge from cell vertex with key: effector-memory-CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000109452
-Updating gene: ENSG00000167286
-Updating cell: effector-memory-CD8-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000153563
-Inserting edge from cell vertex with key: effector-memory-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000153563
-Inserting gene: ENSG00000237729
-Inserting edge from cell vertex with key: effector-memory-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000237729
-Inserting gene: ENSG00000225616
-Inserting edge from cell vertex with key: effector-memory-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000225616
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000171243
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000171243
-Updating gene: ENSG00000164035
-Updating cell: endothelial-cell-of-artery
-Updating gene: ENSG00000155011
-Inserting gene: ENSG00000265107
-Inserting edge from cell vertex with key: endothelial-cell-of-artery to gene vertex with key: ENSG00000265107
-Updating cell: endothelial-cell-of-lymphatic-vessel
-Updating gene: ENSG00000137077
-Updating cell: epithelial-cell
-Inserting gene: ENSG00000235584
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000235584
-Inserting gene: ENSG00000146477
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000146477
-Updating gene: ENSG00000096088
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000096088
-Updating gene: ENSG00000164265
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000164265
-Updating cell: fibroblast
-Inserting gene: ENSG00000165124
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000165124
-Updating gene: ENSG00000139329
-Updating cell: intermediate-monocyte
-Inserting gene: ENSG00000021852
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000021852
-Inserting gene: ENSG00000229331
-Inserting edge from cell vertex with key: intermediate-monocyte to gene vertex with key: ENSG00000229331
-Updating cell: lung-ciliated-cell
-Updating gene: ENSG00000164972
-Updating gene: ENSG00000124237
-Updating cell: lung-goblet-cell
-Inserting gene: ENSG00000125999
-Inserting edge from cell vertex with key: lung-goblet-cell to gene vertex with key: ENSG00000125999
-Inserting gene: ENSG00000117983
-Inserting edge from cell vertex with key: lung-goblet-cell to gene vertex with key: ENSG00000117983
-Updating cell: lung-neuroendocrine-cell
-Inserting gene: ENSG00000134443
-Inserting edge from cell vertex with key: lung-neuroendocrine-cell to gene vertex with key: ENSG00000134443
-Updating cell: lymphocyte
-Updating gene: ENSG00000089685
-Inserting edge from cell vertex with key: lymphocyte to gene vertex with key: ENSG00000089685
-Inserting gene: ENSG00000105011
-Inserting edge from cell vertex with key: lymphocyte to gene vertex with key: ENSG00000105011
-Updating cell: mature-NK-T-cell
-Updating gene: ENSG00000143184
-Inserting gene: ENSG00000237499
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000237499
-Updating cell: myeloid-leukocyte
-Updating gene: ENSG00000197253
-Inserting gene: ENSG00000149534
-Inserting edge from cell vertex with key: myeloid-leukocyte to gene vertex with key: ENSG00000149534
-Updating cell: myofibroblast-cell
-Inserting gene: ENSG00000149090
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000149090
-Inserting gene: ENSG00000041982
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000041982
-Updating cell: naive-thymus-derived-CD4-positive:-alpha-beta-T-cell
-Updating gene: ENSG00000237943
-Updating gene: ENSG00000126353
-Updating cell: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000227191
-Inserting edge from cell vertex with key: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000227191
-Inserting gene: ENSG00000225783
-Inserting edge from cell vertex with key: naive-thymus-derived-CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000225783
-Updating gene: ENSG00000100450
-Updating cell: natural-killer-cell
-Inserting gene: ENSG00000198574
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000198574
-Inserting gene: ENSG00000134539
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000134539
-Updating cell: neutrophil
-Updating gene: ENSG00000162747
-Updating cell: non-classical-monocyte
-Inserting gene: ENSG00000233392
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000233392
-Inserting gene: ENSG00000142512
-Inserting edge from cell vertex with key: non-classical-monocyte to gene vertex with key: ENSG00000142512
-Updating cell: pericyte
-Updating gene: ENSG00000050555
-Inserting gene: ENSG00000105894
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000105894
-Updating cell: plasma-cell
-Inserting gene: ENSG00000235366
-Inserting edge from cell vertex with key: plasma-cell to gene vertex with key: ENSG00000235366
-Updating cell: plasmacytoid-dendritic-cell:-human
-Inserting gene: ENSG00000198178
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell:-human to gene vertex with key: ENSG00000198178
-Inserting gene: ENSG00000229961
-Inserting edge from cell vertex with key: plasmacytoid-dendritic-cell:-human to gene vertex with key: ENSG00000229961
-Updating cell: pulmonary-interstitial-fibroblast
-Inserting gene: ENSG00000137558
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000137558
-Inserting gene: ENSG00000088882
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000088882
-Updating cell: pulmonary-ionocyte
-Inserting gene: ENSG00000240045
-Inserting edge from cell vertex with key: pulmonary-ionocyte to gene vertex with key: ENSG00000240045
-Updating cell: respiratory-basal-cell
-Updating gene: ENSG00000128422
-Updating gene: ENSG00000230937
-Updating cell: type-I-pneumocyte
-Inserting gene: ENSG00000182010
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000182010
-Inserting gene: ENSG00000136155
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000136155
-Updating cell: type-II-pneumocyte
-Inserting gene: ENSG00000162551
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000162551
-Inserting gene: ENSG00000167972
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000167972
-Updating cell: vascular-associated-smooth-muscle-cell
-Inserting gene: ENSG00000181856
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000181856
-Inserting gene: ENSG00000158859
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000158859
-Updating gene: ENSG00000187513
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000187513
-Updating cell: vein-endothelial-cell
-Updating gene: ENSG00000213088
-Inserting gene: ENSG00000133800
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000133800
-Reading results file: ../data/nsforest-2024-06-27/f9846bb4-784d-4582-92c1-3f279e4c6f0c/cell_type_results.csv
-Updating cell: chondrocyte
-Updating gene: ENSG00000124159
-Updating gene: ENSG00000049089
-Updating cell: fibroblast
-Inserting gene: ENSG00000196154
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000196154
-Inserting gene: ENSG00000132386
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000132386
-Updating gene: ENSG00000125378
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000125378
-Updating cell: fibroblast-of-lung
-Inserting gene: ENSG00000113594
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000113594
-Updating cell: mesenchymal-cell
-Updating gene: ENSG00000164093
-Inserting gene: ENSG00000143320
-Inserting edge from cell vertex with key: mesenchymal-cell to gene vertex with key: ENSG00000143320
-Updating cell: mesothelial-cell
-Inserting gene: ENSG00000171345
-Inserting edge from cell vertex with key: mesothelial-cell to gene vertex with key: ENSG00000171345
-Inserting gene: ENSG00000243566
-Inserting edge from cell vertex with key: mesothelial-cell to gene vertex with key: ENSG00000243566
-Updating cell: myofibroblast-cell
-Updating gene: ENSG00000269096
-Updating gene: ENSG00000124780
-Updating cell: pericyte
-Updating gene: ENSG00000185633
-Inserting gene: ENSG00000113749
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000113749
-Updating cell: pulmonary-interstitial-fibroblast
-Updating gene: ENSG00000160867
-Inserting gene: ENSG00000197766
-Inserting edge from cell vertex with key: pulmonary-interstitial-fibroblast to gene vertex with key: ENSG00000197766
-Updating cell: smooth-muscle-cell
-Inserting gene: ENSG00000198336
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000198336
-Updating gene: ENSG00000118194
-Updating cell: tracheobronchial-smooth-muscle-cell
-Inserting gene: ENSG00000010278
-Inserting edge from cell vertex with key: tracheobronchial-smooth-muscle-cell to gene vertex with key: ENSG00000010278
-Inserting gene: ENSG00000130176
-Inserting edge from cell vertex with key: tracheobronchial-smooth-muscle-cell to gene vertex with key: ENSG00000130176
-Updating cell: vascular-associated-smooth-muscle-cell
-Updating gene: ENSG00000074527
-Reading results file: ../data/nsforest-2024-06-27/9968be68-ab65-4a38-9e1a-c9b6abece194/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000105369
-Inserting gene: ENSG00000007312
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000007312
-Updating cell: basal-cell
-Updating gene: ENSG00000186081
-Updating gene: ENSG00000196754
-Updating cell: chondrocyte
-Updating gene: ENSG00000049089
-Inserting gene: ENSG00000157766
-Inserting edge from cell vertex with key: chondrocyte to gene vertex with key: ENSG00000157766
-Inserting cell: ciliated-epithelial-cell
-Updating gene: ENSG00000186973
-Inserting edge from cell vertex with key: ciliated-epithelial-cell to gene vertex with key: ENSG00000186973
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000249751
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000249751
-Inserting cell: enteroendocrine-cell
-Inserting gene: ENSG00000162992
-Inserting edge from cell vertex with key: enteroendocrine-cell to gene vertex with key: ENSG00000162992
-Updating cell: epithelial-cell
-Inserting gene: ENSG00000066405
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000066405
-Inserting gene: ENSG00000109511
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000109511
-Updating cell: epithelial-cell-of-lung
-Inserting gene: ENSG00000229415
-Inserting edge from cell vertex with key: epithelial-cell-of-lung to gene vertex with key: ENSG00000229415
-Updating cell: erythroblast
-Updating gene: ENSG00000105610
-Inserting edge from cell vertex with key: erythroblast to gene vertex with key: ENSG00000105610
-Inserting cell: glial-cell
-Inserting gene: ENSG00000123560
-Inserting edge from cell vertex with key: glial-cell to gene vertex with key: ENSG00000123560
-Updating gene: ENSG00000071991
-Inserting edge from cell vertex with key: glial-cell to gene vertex with key: ENSG00000071991
-Inserting cell: hepatocyte
-Inserting gene: ENSG00000145192
-Inserting edge from cell vertex with key: hepatocyte to gene vertex with key: ENSG00000145192
-Inserting gene: ENSG00000138207
-Inserting edge from cell vertex with key: hepatocyte to gene vertex with key: ENSG00000138207
-Inserting cell: intestinal-epithelial-cell
-Inserting gene: ENSG00000166825
-Inserting edge from cell vertex with key: intestinal-epithelial-cell to gene vertex with key: ENSG00000166825
-Updating gene: ENSG00000095932
-Inserting edge from cell vertex with key: intestinal-epithelial-cell to gene vertex with key: ENSG00000095932
-Inserting cell: intestine-goblet-cell
-Inserting gene: ENSG00000016490
-Inserting edge from cell vertex with key: intestine-goblet-cell to gene vertex with key: ENSG00000016490
-Inserting gene: ENSG00000198788
-Inserting edge from cell vertex with key: intestine-goblet-cell to gene vertex with key: ENSG00000198788
-Updating cell: mature-NK-T-cell
-Updating gene: ENSG00000111796
-Inserting edge from cell vertex with key: mature-NK-T-cell to gene vertex with key: ENSG00000111796
-Updating cell: mesenchymal-cell
-Inserting gene: ENSG00000166482
-Inserting edge from cell vertex with key: mesenchymal-cell to gene vertex with key: ENSG00000166482
-Updating cell: mesothelial-cell
-Updating gene: ENSG00000243566
-Updating gene: ENSG00000105048
-Updating cell: myeloid-leukocyte
-Updating gene: ENSG00000173372
-Inserting edge from cell vertex with key: myeloid-leukocyte to gene vertex with key: ENSG00000173372
-Updating gene: ENSG00000159189
-Inserting edge from cell vertex with key: myeloid-leukocyte to gene vertex with key: ENSG00000159189
-Updating cell: pericyte
-Updating gene: ENSG00000131097
-Updating gene: ENSG00000107796
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000107796
-Inserting cell: peripheral-nervous-system-neuron
-Inserting gene: ENSG00000162374
-Inserting edge from cell vertex with key: peripheral-nervous-system-neuron to gene vertex with key: ENSG00000162374
-Inserting gene: ENSG00000135406
-Inserting edge from cell vertex with key: peripheral-nervous-system-neuron to gene vertex with key: ENSG00000135406
-Inserting cell: unknown
-Inserting gene: ENSG00000110848
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000110848
-Updating gene: ENSG00000230937
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000230937
-Updating gene: ENSG00000227507
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000227507
-Inserting gene: ENSG00000169442
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000169442
-Reading results file: ../data/nsforest-2024-06-27/d8da613f-e681-4c69-b463-e94f5e66847f/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000153064
-Updating cell: CD4-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000152495
-Inserting edge from cell vertex with key: CD4-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000152495
-Updating cell: CD8-positive:-alpha-beta-T-cell
-Inserting gene: ENSG00000136250
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000136250
-Updating gene: ENSG00000172673
-Inserting edge from cell vertex with key: CD8-positive:-alpha-beta-T-cell to gene vertex with key: ENSG00000172673
-Updating cell: alveolar-macrophage
-Inserting gene: ENSG00000117984
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000117984
-Inserting gene: ENSG00000204287
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000204287
-Inserting gene: ENSG00000197746
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000197746
-Inserting cell: alveolar-type-2-fibroblast-cell
-Inserting gene: ENSG00000135298
-Inserting edge from cell vertex with key: alveolar-type-2-fibroblast-cell to gene vertex with key: ENSG00000135298
-Inserting gene: ENSG00000152527
-Inserting edge from cell vertex with key: alveolar-type-2-fibroblast-cell to gene vertex with key: ENSG00000152527
-Inserting cell: brush-cell-of-trachebronchial-tree
-Inserting gene: ENSG00000124107
-Inserting edge from cell vertex with key: brush-cell-of-trachebronchial-tree to gene vertex with key: ENSG00000124107
-Inserting gene: ENSG00000101443
-Inserting edge from cell vertex with key: brush-cell-of-trachebronchial-tree to gene vertex with key: ENSG00000101443
-Updating cell: capillary-endothelial-cell
-Updating gene: ENSG00000164120
-Inserting gene: ENSG00000138411
-Inserting edge from cell vertex with key: capillary-endothelial-cell to gene vertex with key: ENSG00000138411
-Updating cell: club-cell
-Inserting gene: ENSG00000236039
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000236039
-Inserting gene: ENSG00000008394
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000008394
-Inserting gene: ENSG00000172264
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000172264
-Updating cell: dendritic-cell
-Inserting gene: ENSG00000048052
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000048052
-Inserting gene: ENSG00000223865
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000223865
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000069122
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000069122
-Inserting gene: ENSG00000047617
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000047617
-Updating cell: endothelial-cell-of-artery
-Updating gene: ENSG00000155011
-Updating cell: epithelial-cell
-Inserting gene: ENSG00000080824
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000080824
-Inserting gene: ENSG00000198886
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000198886
-Inserting gene: ENSG00000198804
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000198804
-Updating cell: fibroblast
-Inserting gene: ENSG00000168542
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000168542
-Inserting gene: ENSG00000204262
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000204262
-Updating cell: lung-ciliated-cell
-Updating gene: ENSG00000174844
-Inserting edge from cell vertex with key: lung-ciliated-cell to gene vertex with key: ENSG00000174844
-Updating gene: ENSG00000197826
-Updating cell: lung-goblet-cell
-Updating gene: ENSG00000125999
-Updating cell: macrophage
-Inserting gene: ENSG00000153208
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000153208
-Updating gene: ENSG00000137491
-Updating cell: mast-cell
-Inserting gene: ENSG00000157404
-Inserting edge from cell vertex with key: mast-cell to gene vertex with key: ENSG00000157404
-Inserting gene: ENSG00000185052
-Inserting edge from cell vertex with key: mast-cell to gene vertex with key: ENSG00000185052
-Inserting cell: mesothelial-fibroblast
-Inserting gene: ENSG00000204442
-Inserting edge from cell vertex with key: mesothelial-fibroblast to gene vertex with key: ENSG00000204442
-Inserting gene: ENSG00000091986
-Inserting edge from cell vertex with key: mesothelial-fibroblast to gene vertex with key: ENSG00000091986
-Inserting gene: ENSG00000169946
-Inserting edge from cell vertex with key: mesothelial-fibroblast to gene vertex with key: ENSG00000169946
-Updating cell: monocyte
-Inserting gene: ENSG00000115919
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000115919
-Inserting gene: ENSG00000197555
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000197555
-Updating cell: mucus-secreting-cell
-Inserting gene: ENSG00000155093
-Inserting edge from cell vertex with key: mucus-secreting-cell to gene vertex with key: ENSG00000155093
-Updating cell: natural-killer-cell
-Inserting gene: ENSG00000198821
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000198821
-Inserting gene: ENSG00000153310
-Inserting edge from cell vertex with key: natural-killer-cell to gene vertex with key: ENSG00000153310
-Updating cell: neuron
-Inserting gene: ENSG00000189056
-Inserting edge from cell vertex with key: neuron to gene vertex with key: ENSG00000189056
-Updating cell: pericyte
-Inserting gene: ENSG00000152402
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000152402
-Inserting gene: ENSG00000137672
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000137672
-Updating cell: plasma-cell
-Updating gene: ENSG00000132465
-Updating cell: regulatory-T-cell
-Inserting gene: ENSG00000030419
-Inserting edge from cell vertex with key: regulatory-T-cell to gene vertex with key: ENSG00000030419
-Inserting gene: ENSG00000227240
-Inserting edge from cell vertex with key: regulatory-T-cell to gene vertex with key: ENSG00000227240
-Updating cell: respiratory-basal-cell
-Updating gene: ENSG00000230937
-Inserting gene: ENSG00000164171
-Inserting edge from cell vertex with key: respiratory-basal-cell to gene vertex with key: ENSG00000164171
-Updating cell: tracheobronchial-smooth-muscle-cell
-Inserting gene: ENSG00000133392
-Inserting edge from cell vertex with key: tracheobronchial-smooth-muscle-cell to gene vertex with key: ENSG00000133392
-Updating cell: type-II-pneumocyte
-Inserting gene: ENSG00000179399
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000179399
-Updating cell: vascular-associated-smooth-muscle-cell
-Inserting gene: ENSG00000102755
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000102755
-Updating gene: ENSG00000069122
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000069122
-Updating gene: ENSG00000185008
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000185008
-Updating cell: vein-endothelial-cell
-Inserting gene: ENSG00000151789
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000151789
-Inserting gene: ENSG00000163638
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000163638
-Reading results file: ../data/nsforest-2024-06-27/2adb1f8a-a6b1-4909-8ee8-484814e2d4bf/cell_type_results.csv
-Updating cell: B-cell
-Updating gene: ENSG00000169442
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000169442
-Inserting gene: ENSG00000019582
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000019582
-Inserting cell: Sertoli-cell
-Inserting gene: ENSG00000104899
-Inserting edge from cell vertex with key: Sertoli-cell to gene vertex with key: ENSG00000104899
-Updating gene: ENSG00000118137
-Inserting edge from cell vertex with key: Sertoli-cell to gene vertex with key: ENSG00000118137
-Updating cell: T-cell
-Inserting gene: ENSG00000198668
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000198668
-Inserting gene: ENSG00000142669
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000142669
-Inserting cell: acinar-cell
-Updating gene: ENSG00000185559
-Inserting edge from cell vertex with key: acinar-cell to gene vertex with key: ENSG00000185559
-Inserting gene: ENSG00000229807
-Inserting edge from cell vertex with key: acinar-cell to gene vertex with key: ENSG00000229807
-Inserting cell: alternatively-activated-macrophage
-Updating gene: ENSG00000183019
-Inserting edge from cell vertex with key: alternatively-activated-macrophage to gene vertex with key: ENSG00000183019
-Updating gene: ENSG00000019169
-Inserting edge from cell vertex with key: alternatively-activated-macrophage to gene vertex with key: ENSG00000019169
-Inserting cell: astrocyte
-Inserting gene: ENSG00000079215
-Inserting edge from cell vertex with key: astrocyte to gene vertex with key: ENSG00000079215
-Updating cell: basal-cell
-Updating gene: ENSG00000186081
-Updating gene: ENSG00000196754
-Inserting cell: cell-of-skeletal-muscle
-Inserting gene: ENSG00000117632
-Inserting edge from cell vertex with key: cell-of-skeletal-muscle to gene vertex with key: ENSG00000117632
-Inserting gene: ENSG00000203875
-Inserting edge from cell vertex with key: cell-of-skeletal-muscle to gene vertex with key: ENSG00000203875
-Inserting gene: ENSG00000123416
-Inserting edge from cell vertex with key: cell-of-skeletal-muscle to gene vertex with key: ENSG00000123416
-Updating cell: chondrocyte
-Inserting gene: ENSG00000162510
-Inserting edge from cell vertex with key: chondrocyte to gene vertex with key: ENSG00000162510
-Inserting cell: cord-blood-hematopoietic-stem-cell
-Inserting gene: ENSG00000204472
-Inserting edge from cell vertex with key: cord-blood-hematopoietic-stem-cell to gene vertex with key: ENSG00000204472
-Inserting gene: ENSG00000114942
-Inserting edge from cell vertex with key: cord-blood-hematopoietic-stem-cell to gene vertex with key: ENSG00000114942
-Updating cell: dendritic-cell
-Updating gene: ENSG00000196735
-Updating gene: ENSG00000223865
-Inserting cell: embryonic-stem-cell
-Inserting gene: ENSG00000173401
-Inserting edge from cell vertex with key: embryonic-stem-cell to gene vertex with key: ENSG00000173401
-Inserting cell: endocrine-cell
-Inserting gene: ENSG00000132475
-Inserting edge from cell vertex with key: endocrine-cell to gene vertex with key: ENSG00000132475
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000175899
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000175899
-Inserting gene: ENSG00000169908
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000169908
-Inserting cell: enterocyte
-Inserting gene: ENSG00000136810
-Inserting edge from cell vertex with key: enterocyte to gene vertex with key: ENSG00000136810
-Inserting gene: ENSG00000184009
-Inserting edge from cell vertex with key: enterocyte to gene vertex with key: ENSG00000184009
-Updating cell: epithelial-cell
-Inserting gene: ENSG00000248527
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000248527
-Inserting gene: ENSG00000111716
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000111716
-Reading results file: ../data/nsforest-2024-06-27/6e00ccf7-0749-46ef-a999-dba785630d52/cell_type_results.csv
-Updating cell: B-cell
-Inserting gene: ENSG00000211899
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000211899
-Updating cell: T-cell
-Inserting gene: ENSG00000173762
-Inserting edge from cell vertex with key: T-cell to gene vertex with key: ENSG00000173762
-Updating cell: endothelial-cell
-Inserting gene: ENSG00000165949
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000165949
-Inserting gene: ENSG00000131477
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000131477
-Updating cell: fibroblast-of-lung
-Inserting gene: ENSG00000105989
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000105989
-Updating gene: ENSG00000197766
-Inserting edge from cell vertex with key: fibroblast-of-lung to gene vertex with key: ENSG00000197766
-Updating cell: macrophage
-Updating gene: ENSG00000204472
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000204472
-Inserting gene: ENSG00000216490
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000216490
-Updating cell: myofibroblast-cell
-Updating gene: ENSG00000175084
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000175084
-Updating gene: ENSG00000130176
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000130176
-Updating cell: pericyte
-Updating gene: ENSG00000152402
-Updating gene: ENSG00000131097
-Updating cell: smooth-muscle-cell
-Inserting gene: ENSG00000140538
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000140538
-Inserting gene: ENSG00000198523
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000198523
-Inserting cell: stromal-cell
-Updating gene: ENSG00000145824
-Inserting edge from cell vertex with key: stromal-cell to gene vertex with key: ENSG00000145824
-Updating cell: type-I-pneumocyte
-Inserting gene: ENSG00000188529
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000188529
-Inserting gene: ENSG00000180992
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000180992
-Updating cell: type-II-pneumocyte
-Inserting gene: ENSG00000171885
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000171885
-Updating gene: ENSG00000066405
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000066405
-Reading results file: ../data/nsforest-2024-06-27/3de0ad6d-4378-4f62-b37b-ec0b75a50d94/cell_type_results.csv
-Updating cell: B-cell
-Inserting gene: ENSG00000196092
-Inserting edge from cell vertex with key: B-cell to gene vertex with key: ENSG00000196092
-Updating cell: T-cell
-Updating gene: ENSG00000172673
-Updating cell: alveolar-macrophage
-Inserting gene: ENSG00000132170
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000132170
-Inserting gene: ENSG00000160179
-Inserting edge from cell vertex with key: alveolar-macrophage to gene vertex with key: ENSG00000160179
-Updating cell: basal-cell
-Inserting gene: ENSG00000073282
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000073282
-Inserting gene: ENSG00000260372
-Inserting edge from cell vertex with key: basal-cell to gene vertex with key: ENSG00000260372
-Updating cell: blood-vessel-endothelial-cell
-Inserting gene: ENSG00000085563
-Inserting edge from cell vertex with key: blood-vessel-endothelial-cell to gene vertex with key: ENSG00000085563
-Updating cell: chondrocyte
-Inserting gene: ENSG00000174748
-Inserting edge from cell vertex with key: chondrocyte to gene vertex with key: ENSG00000174748
-Inserting gene: ENSG00000183098
-Inserting edge from cell vertex with key: chondrocyte to gene vertex with key: ENSG00000183098
-Updating cell: ciliated-cell
-Updating gene: ENSG00000197826
-Inserting edge from cell vertex with key: ciliated-cell to gene vertex with key: ENSG00000197826
-Updating gene: ENSG00000174844
-Updating cell: club-cell
-Inserting gene: ENSG00000135842
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000135842
-Inserting gene: ENSG00000138696
-Inserting edge from cell vertex with key: club-cell to gene vertex with key: ENSG00000138696
-Updating cell: dendritic-cell
-Inserting gene: ENSG00000128815
-Inserting edge from cell vertex with key: dendritic-cell to gene vertex with key: ENSG00000128815
-Updating cell: endothelial-cell
-Updating gene: ENSG00000138411
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000138411
-Inserting gene: ENSG00000110328
-Inserting edge from cell vertex with key: endothelial-cell to gene vertex with key: ENSG00000110328
-Updating cell: endothelial-cell-of-artery
-Updating gene: ENSG00000155011
-Inserting cell: enucleate-erythrocyte
-Inserting gene: ENSG00000004939
-Inserting edge from cell vertex with key: enucleate-erythrocyte to gene vertex with key: ENSG00000004939
-Inserting gene: ENSG00000162722
-Inserting edge from cell vertex with key: enucleate-erythrocyte to gene vertex with key: ENSG00000162722
-Updating cell: epithelial-cell
-Updating gene: ENSG00000257894
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000257894
-Inserting gene: ENSG00000112232
-Inserting edge from cell vertex with key: epithelial-cell to gene vertex with key: ENSG00000112232
-Updating gene: ENSG00000146477
-Updating cell: fibroblast
-Updating gene: ENSG00000145147
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000145147
-Inserting gene: ENSG00000140937
-Inserting edge from cell vertex with key: fibroblast to gene vertex with key: ENSG00000140937
-Inserting cell: goblet-cell
-Updating gene: ENSG00000125999
-Inserting edge from cell vertex with key: goblet-cell to gene vertex with key: ENSG00000125999
-Inserting gene: ENSG00000197446
-Inserting edge from cell vertex with key: goblet-cell to gene vertex with key: ENSG00000197446
-Updating cell: lung-neuroendocrine-cell
-Inserting gene: ENSG00000241956
-Inserting edge from cell vertex with key: lung-neuroendocrine-cell to gene vertex with key: ENSG00000241956
-Updating cell: macrophage
-Inserting gene: ENSG00000124491
-Inserting edge from cell vertex with key: macrophage to gene vertex with key: ENSG00000124491
-Updating cell: mast-cell
-Updating gene: ENSG00000157404
-Updating cell: monocyte
-Inserting gene: ENSG00000103187
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000103187
-Inserting gene: ENSG00000028137
-Inserting edge from cell vertex with key: monocyte to gene vertex with key: ENSG00000028137
-Updating cell: myofibroblast-cell
-Inserting gene: ENSG00000126733
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000126733
-Inserting gene: ENSG00000112319
-Inserting edge from cell vertex with key: myofibroblast-cell to gene vertex with key: ENSG00000112319
-Updating cell: natural-killer-cell
-Updating gene: ENSG00000115523
-Updating cell: pericyte
-Inserting gene: ENSG00000176204
-Inserting edge from cell vertex with key: pericyte to gene vertex with key: ENSG00000176204
-Updating cell: smooth-muscle-cell
-Inserting gene: ENSG00000172987
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000172987
-Inserting gene: ENSG00000141052
-Inserting edge from cell vertex with key: smooth-muscle-cell to gene vertex with key: ENSG00000141052
-Updating cell: type-I-pneumocyte
-Updating gene: ENSG00000182010
-Inserting gene: ENSG00000169031
-Inserting edge from cell vertex with key: type-I-pneumocyte to gene vertex with key: ENSG00000169031
-Updating cell: type-II-pneumocyte
-Updating gene: ENSG00000152128
-Inserting gene: ENSG00000188906
-Inserting edge from cell vertex with key: type-II-pneumocyte to gene vertex with key: ENSG00000188906
-Updating cell: unknown
-Inserting gene: ENSG00000213853
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000213853
-Inserting gene: ENSG00000153093
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000153093
-Inserting gene: ENSG00000204764
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000204764
-Inserting gene: ENSG00000068650
-Inserting edge from cell vertex with key: unknown to gene vertex with key: ENSG00000068650
-Updating cell: vascular-associated-smooth-muscle-cell
-Inserting gene: ENSG00000172572
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000172572
-Updating gene: ENSG00000141052
-Inserting edge from cell vertex with key: vascular-associated-smooth-muscle-cell to gene vertex with key: ENSG00000141052
-Updating cell: vein-endothelial-cell
-Inserting gene: ENSG00000174640
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000174640
-Inserting gene: ENSG00000203727
-Inserting edge from cell vertex with key: vein-endothelial-cell to gene vertex with key: ENSG00000203727
-#+end_example
-
 Note that all of the database objects created can be deleted as follows:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   delete_edge_collection(graph, edge_name)
   delete_vertex_collection(graph, gene_vertex_name)
   delete_vertex_collection(graph, cell_vertex_name)
@@ -2151,9 +456,3 @@ Note that all of the database objects created can be deleted as follows:
   delete_database(database_name)
 #+end_src
 
-#+RESULTS:
-: Deleting graph edge definition and collection: cell-gene
-: Deleting graph vertex collection: gene
-: Deleting graph vertex collection: cell
-: Deleting database graph: cell-gene
-: Deleting ArangoDB database: ncbi-cell-v0.1.0
