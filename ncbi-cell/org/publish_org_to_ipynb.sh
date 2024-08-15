@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Publish each Org mode fie in the directory containing this script to
+# its corresponding Jupyter notebook.
+
 # Assign home directory of this script
 home=$(dirname $(dirname $(realpath $0)))
 

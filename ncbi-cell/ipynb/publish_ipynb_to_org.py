@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import json
 from pathlib import Path
 import re
@@ -20,9 +21,11 @@ def write_markdown(fp, cell):
     """
     # Write each line
     spcs = ""
+    in_lisp = False
+    in_bash = False
     for line in cell["source"]:
 
-        # Substitue paired double asterisks with paired single
+        # Substitute paired double asterisks with paired single
         # asterisks
         m = re.search(r"(\*\*).*(\*\*)", line)
         if m:
@@ -54,23 +57,38 @@ def write_markdown(fp, cell):
                 line,
             )
 
-        # Replace three space after leading hyphen with one
+        # Replace three spaces after leading hyphen with one
         line = re.sub(r"^-   ", "- ", line)
+
+        # Replace four leading spaces with two
+        line = re.sub(r"^    ", "  ", line)
 
         # Handle emacs-lisp source blocks
         if "``` commonlisp" in line:
+            in_lisp = True
             fp.write("#+begin_src emacs-lisp :session shared :results silent\n")
             spcs = "  "
             continue
-        elif "```" in line:
+        if in_lisp and "```" in line:
+            in_lisp = False
             fp.write("#+end_src\n")
             spcs = ""
             continue
 
-        # Substitue paired backticks with paired tildes
-        m = re.search(r"(`).*(`)", line)
-        if m:
-            line = re.sub(r"(`).*(`)", m.group(0).replace("`", "~"), line)
+        # Handle shell source blocks
+        if "``` bash" in line:
+            in_bash = True
+            fp.write("#+begin_src sh\n")
+            spcs = "  "
+            continue
+        if in_bash and "```" in line:
+            in_bash = False
+            fp.write("#+end_src\n")
+            spcs = ""
+            continue
+
+        # Substitute backticks with tildes
+        line = line.replace("`", "~")
 
         fp.write(spcs + line)
 
@@ -139,7 +157,7 @@ def publish_ipynb_to_org(ipynb_path):
 
 def main():
     """Publish each Jupyter notebook in the directory containing this
-    script as an Org mode file.
+    script to its corresponding Org mode file.
 
     Parameters
     ----------
