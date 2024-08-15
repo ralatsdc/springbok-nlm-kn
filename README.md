@@ -31,16 +31,49 @@ This README provides guidance on using Python to:
 
 ### Environment Variables
 
-To access PubMed and run OntoGPT, you need several API keys. Create a `.zshenv` file in your project directory with the following content:
+To use PubMed and OntoGPT, you need access keys called API keys. 
 
-```sh
-export BIOPORTAL_API_KEY=<YOUR_BIOPORTAL_API_KEY>
-export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
-export NCBI_EMAIL=<YOUR_NCBI_EMAIL>
-export NCBI_API_KEY=<YOUR_NCBI_API_KEY>
-```
+Here’s how to set up your API keys:
 
-Replace `<YOUR_BIOPORTAL_API_KEY>`, `<YOUR_OPENAI_API_KEY>`, `<YOUR_NCBI_EMAIL>`, and `<YOUR_NCBI_API_KEY>` with your actual keys. Do not commit this file to the repository.
+1. **Create a `.zshenv` File**
+
+   You need to create a file named `.zshenv` in your home directory. This file will store your API keys. You can do this by opening a terminal and running the following command:
+
+   ```sh
+   touch ~/.zshenv
+   ```
+
+2. **Add Your API Keys**
+
+   Open the `.zshenv` file using a text editor. Below is an example of how to use `nano`, but feel free to use any editor you prefer. 
+
+   ```sh
+   nano ~/.zshenv
+   ```
+
+   Add the following lines to the file. Replace `<YOUR_BIOPORTAL_API_KEY>`, `<YOUR_OPENAI_API_KEY>`, `<YOUR_NCBI_EMAIL>`, and `<YOUR_NCBI_API_KEY>` with your actual API keys and email:
+
+   ```sh
+   export BIOPORTAL_API_KEY=<YOUR_BIOPORTAL_API_KEY>
+   export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
+   export NCBI_EMAIL=<YOUR_NCBI_EMAIL>
+   export NCBI_API_KEY=<YOUR_NCBI_API_KEY>
+   ```
+
+   Save the file and exit the editor. In `nano`, you can do this by pressing `CTRL + X`, then `Y` to confirm, and `Enter` to save.
+
+
+4. **Apply the Changes**
+
+   For the changes to take effect, you need to reload the `.zshenv` file. You can do this by running:
+
+   ```sh
+   source ~/.zshenv
+   ```
+
+   This command updates your terminal with the new environment variables you added.
+
+**Important:** Do not share or commit your `.zshenv` file to this or any repositories. This file contains sensitive information.
 
 ### Python Dependencies
 
@@ -50,7 +83,7 @@ We use Poetry to manage dependencies. Before installing dependencies, you need t
 
 **For Windows:**
 
-1. Download the Python 3.10 installer from the [official Python website](https://www.python.org/downloads/release/python-3100/).
+1. Download the Python 3.10 installer from the [official Python website](https://www.python.org/downloads/release/python-31013/).
 2. Run the installer and ensure the option "Add Python 3.10 to PATH" is checked.
 3. Click "Install Now" and follow the prompts to complete the installation.
 
@@ -65,6 +98,22 @@ We use Poetry to manage dependencies. Before installing dependencies, you need t
     ```sh
     python3.10 --version
     ```
+
+If you see the error `brew: command not found`, it means Homebrew is not installed. To fix this:
+
+1. **Install Homebrew**:
+   Open Terminal and run:
+   ```sh
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+
+2. **Verify Installation**:
+   Check that Homebrew is installed by running:
+   ```sh
+   brew --version
+   ```
+
+This should display the Homebrew version, confirming that it’s correctly installed. Run `brew install python@3.10` again to finish Python installation.
 
 **For Linux:**
 
