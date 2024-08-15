@@ -1,6 +1,6 @@
-#+title: Chapter 03: Use of NS-Forest
-#+author: Ray LeClair
-#+date <2024-07-07 Sun>
+*Chapter 03: Use of NS-Forest*
+
+Ray LeClair <2024-07-07 Sun>
 
 * Objectives
 
@@ -9,15 +9,18 @@ combinations for cell type identification from single-cell RNA
 sequencing data is the first processing step of the NCBI Cell
 pipeline, the objective of this document is to:
 
-+ Run NS-Forest on an example human lung cell CELLxGENE dataset
-  
+- Run NS-Forest on an example human lung cell CELLxGENE dataset
+
 ** Background
 
-This [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]] walks through all aspects of using NS-Forest.
+The NS-Forest repository contains a tutorial that walks through all
+aspects of using NS-Forest.
+
+See: [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]]
 
 ** Development environment
 
-See [[file:Introduction.ipynb][Introduction.ipynb]].
+See: [[file:Introduction.ipynb][Introduction.ipynb]]
 
 *** Jupyter Notebook
 
@@ -37,12 +40,13 @@ evaluate this code block to activate the virtual environment:
 
 Following the tutorial, we write a function that runs NS-Forest on an
 example human lung cell CELLxGENE dataset. We assume the dataset has
-been previously identified and downloaded (see
-[[file:Chapter-01-CELLxGENE.org][Chapter-01-CELLxGENE.org]]).
+been previously identified and downloaded.
+
+See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle ../py/NSForest.py
+#+begin_src python :results silent :session shared :tangle ../py/NSForest.py
   import os
 
   import nsforest as ns
@@ -61,103 +65,102 @@ To begin, we import modules, and assign module scope variables:
 
 Next we write the function, noting:
 
-+ Some datasets have multiple annotations per sample
-  (ex. "broad_cell_type" and "granular_cell_type"). NSForest can be
-  run on multiple `cluster_header`'s. Combining the parent and child
-  markers may improve classification results.
+- Some datasets have multiple annotations per sample
+  (ex. ~broad_cell_type~ and ~granular_cell_type~). NSForest can be
+  run on multiple ~cluster_header~ values. Combining the parent and
+  child markers may improve classification results.
 
-+ `adata.var_names` must be unique. If there is a problem, usually it
-  can be solved by assigning `adata.var.index =
-  adata.var["ensembl_id"]`.
+- ~adata.var_names~ must be unique. If there is a problem, usually it
+  can be solved by assigning ~adata.var.index = adata.var["ensembl_id"]~.
 
-+ Some datasets are too large and need to be downsampled to be run
+- Some datasets are too large and need to be downsampled to be run
   through the pipeline. When downsampling, be sure to have all the
   granular cluster annotations represented.
 
-+ Only run ns.pp.dendrogram() if there is no pre-defined dendrogram
+- Only run ns.pp.dendrogram() if there is no pre-defined dendrogram
   order. This step can still be run with no effects, but the runtime
   may increase.
 
-#+begin_src python :session shared :results silent :tangle ../py/NSForest.py
-def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type"):
-    """Run NSForest using the specified dataset filename, and
-    cluster_header.
+#+begin_src python :results silent :session shared :tangle ../py/NSForest.py
+  def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type"):
+      """Run NSForest using the specified dataset filename, and
+      cluster_header.
 
-    Parameters
-    ----------
-    h5ad_filename : str
-       The dataset filename
-    cluster_header : str
-       The cluster header
+      Parameters
+      ----------
+      h5ad_filename : str
+         The dataset filename
+      cluster_header : str
+         The cluster header
 
-    Returns
-    -------
-    None
-    """
-    # Assign results filename and directory
-    pp_h5ad_filename = f"pp_{h5ad_filename}"
-    results_dirname = h5ad_filename.split(".")[0]
-    results_dirpath = f"{NSFOREST_DIR}/{results_dirname}"
+      Returns
+      -------
+      None
+      """
+      # Assign results filename and directory
+      pp_h5ad_filename = f"pp_{h5ad_filename}"
+      results_dirname = h5ad_filename.split(".")[0]
+      results_dirpath = f"{NSFOREST_DIR}/{results_dirname}"
 
-    # Run NSForest if results do not exist
-    if not os.path.exists(results_dirpath):
-        os.makedirs(results_dirpath)
+      # Run NSForest if results do not exist
+      if not os.path.exists(results_dirpath):
+          os.makedirs(results_dirpath)
 
-        print(f"Loading unprocessed AnnData file: {h5ad_filename}")
-        h5ad_filepath = f"{CELLXGENE_DIR}/{h5ad_filename}"
-        up_adata = sc.read_h5ad(h5ad_filepath)
+          print(f"Loading unprocessed AnnData file: {h5ad_filename}")
+          h5ad_filepath = f"{CELLXGENE_DIR}/{h5ad_filename}"
+          up_adata = sc.read_h5ad(h5ad_filepath)
 
-        # TODO: Check validity of downsampling
-        print("Calculating QC metrics")
-        up_metrics = sc.pp.calculate_qc_metrics(up_adata)
-        if up_metrics[1]["total_counts"].sum() > TOTAL_COUNTS:
-            print("Downsampling unprocessed AnnData file")
-            ds_adata = sc.pp.downsample_counts(
-                up_adata, total_counts=TOTAL_COUNTS, copy=True
-            )
-        else:
-            ds_adata = up_adata  # No need to copy
+          # TODO: Check validity of downsampling
+          print("Calculating QC metrics")
+          up_metrics = sc.pp.calculate_qc_metrics(up_adata)
+          if up_metrics[1]["total_counts"].sum() > TOTAL_COUNTS:
+              print("Downsampling unprocessed AnnData file")
+              ds_adata = sc.pp.downsample_counts(
+                  up_adata, total_counts=TOTAL_COUNTS, copy=True
+              )
+          else:
+              ds_adata = up_adata  # No need to copy
 
-        print("Generating scanpy dendrogram")
-        # Dendrogram order is stored in
-        # `pp_adata.uns["dendrogram_cluster"]["categories_ordered"]`
-        pp_adata = up_adata.copy()
-        pp_adata.obs[cluster_header] = pp_adata.obs[cluster_header].astype(str)
-        pp_adata.obs[cluster_header] = pp_adata.obs[cluster_header].astype("category")
-        pp_adata = ns.pp.dendrogram(
-            pp_adata,
-            cluster_header,
-            save=False,
-            output_folder=results_dirpath,
-            outputfilename_suffix=cluster_header,
-        )
+          print("Generating scanpy dendrogram")
+          # Dendrogram order is stored in
+          # `pp_adata.uns["dendrogram_cluster"]["categories_ordered"]`
+          pp_adata = up_adata.copy()
+          pp_adata.obs[cluster_header] = pp_adata.obs[cluster_header].astype(str)
+          pp_adata.obs[cluster_header] = pp_adata.obs[cluster_header].astype("category")
+          pp_adata = ns.pp.dendrogram(
+              pp_adata,
+              cluster_header,
+              save=False,
+              output_folder=results_dirpath,
+              outputfilename_suffix=cluster_header,
+          )
 
-        print("Calculating cluster medians per gene")
-        pp_adata = ns.pp.prep_medians(pp_adata, cluster_header)
+          print("Calculating cluster medians per gene")
+          pp_adata = ns.pp.prep_medians(pp_adata, cluster_header)
 
-        print("Calculating binary scores per gene per cluster")
-        pp_adata = ns.pp.prep_binary_scores(pp_adata, cluster_header)
+          print("Calculating binary scores per gene per cluster")
+          pp_adata = ns.pp.prep_binary_scores(pp_adata, cluster_header)
 
-        pp_h5ad_filepath = f"{results_dirpath}/{pp_h5ad_filename}"
-        print(f"Saving preprocessed AnnData file: {pp_h5ad_filepath}")
-        pp_adata.write_h5ad(pp_h5ad_filepath)
+          pp_h5ad_filepath = f"{results_dirpath}/{pp_h5ad_filename}"
+          print(f"Saving preprocessed AnnData file: {pp_h5ad_filepath}")
+          pp_adata.write_h5ad(pp_h5ad_filepath)
 
-        print(f"Running NSForest for preprocessed AnnData file: {pp_h5ad_filename}")
-        results = nsforesting.NSForest(
-            pp_adata,
-            cluster_header,
-            output_folder=f"{results_dirpath}/",
-            outputfilename_prefix=cluster_header,
-        )
+          print(f"Running NSForest for preprocessed AnnData file: {pp_h5ad_filename}")
+          results = nsforesting.NSForest(
+              pp_adata,
+              cluster_header,
+              output_folder=f"{results_dirpath}/",
+              outputfilename_prefix=cluster_header,
+          )
 
-    else:
-        print(f"Completed NSForest for preprocessed AnnData file: {pp_h5ad_filename}")
+      else:
+          print(f"Completed NSForest for preprocessed AnnData file: {pp_h5ad_filename}")
 #+end_src
 
 Now call the function for an example CELLxGENE dataset using the
 default ~cluster_header~ of ~"cell_type"~:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   try:
       h5ad_filename = "6e00ccf7-0749-46ef-a999-dba785630d52.H5AD"
       run_nsforest_on_file(h5ad_filename, cluster_header="cell_type")
@@ -165,9 +168,12 @@ default ~cluster_header~ of ~"cell_type"~:
       print_exc()
 #+end_src
 
-#+RESULTS:
-: Completed NSForest for preprocessed AnnData file: pp_6e00ccf7-0749-46ef-a999-dba785630d52.H5AD
+Next, in Chapter 04 we investigate the use of OntoGPT for publication
+processing. In Chapter 05 we'll use the results produced by NS-Forest
+to populate an ArangoDB database graph.
 
-Next, in [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-OntoGPT.ipynb]] we investigate the use of OntoGPT
-for publication processing. In [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]] we'll use the
-results produced by NS-Forest to populate an ArangoDB database graph.
+See:
+
+- [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-OntoGPT.ipynb]]
+- [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
+
