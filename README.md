@@ -17,15 +17,15 @@ This README provides guidance on using Python to:
 
 0. **Set Up the Environment**: Prepare your development environment to properly run Jupyter Notebooks. This includes configuring environment variables and installing necessary Python dependencies. (See [Development Environment](#development-environment))
 
-1. **Retrieve Human Lung Cell Data**: Use CELLxGENE to get dataset metadata and files. (See [Chapter-01-CELLxGENE.ipynb](Chapter-01-CELLxGENE.ipynb))
+1. **Retrieve Human Lung Cell Data**: Use CELLxGENE to get dataset metadata and files. (See [Chapter-01-CELLxGENE.ipynb](ncbi-cell/ipynb/Chapter-01-CELLxGENE.ipynb))
 
-2. **Identify Citations in PubMed**: Use NCBI E-Utilities to find PubMed citations for CELLxGENE datasets. (See [Chapter-02-E-Utilities.ipynb](Chapter-02-E-Utilities.ipynb))
+2. **Identify Citations in PubMed**: Use NCBI E-Utilities to find PubMed citations for CELLxGENE datasets. (See [Chapter-02-E-Utilities.ipynb](ncbi-cell/ipynb/Chapter-02-E-Utilities.ipynb))
 
-3. **Discover Marker Genes**: Use the NSForest package to find marker gene combinations from single-cell RNA sequencing data. (See [Chapter-03-NSforest.ipynb](Chapter-03-NSforest.ipynb))
+3. **Discover Marker Genes**: Use the NSForest package to find marker gene combinations from single-cell RNA sequencing data. (See [Chapter-03-NSforest.ipynb](ncbi-cell/ipynb/Chapter-03-NS-Forest.ipynb))
 
-4. **Extract Structured Information**: Use OntoGPT to extract and structure information from text using large language models (LLMs) and ontology-based grounding. (See [Chapter-04-ontoGPT.ipynb](Chapter-04-ontoGPT.ipynb))
+4. **Extract Structured Information**: Use OntoGPT to extract and structure information from text using large language models (LLMs) and ontology-based grounding. (See [Chapter-04-ontoGPT.ipynb](ncbi-cell/ipynb/Chapter-04-OntoGPT.ipynb))
 
-5. **Visualize Data with ArangoDB**: Create, populate, and display results in a graph database. (See [Chapter-05-ArangoDB.ipynb](Chapter-05-ArangoDB.ipynb))
+5. **Visualize Data with ArangoDB**: Create, populate, and display results in a graph database. (See [Chapter-05-ArangoDB.ipynb](ncbi-cell/ipynb/Chapter-05-ArangoDB.ipynb))
 
 ## Development Environment
 
