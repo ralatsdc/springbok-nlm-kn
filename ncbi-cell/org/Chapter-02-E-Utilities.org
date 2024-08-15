@@ -1,13 +1,17 @@
-#+title: Chapter 02: Use of E-Utilities
-#+author: Ray LeClair
-#+date: <2024-07-06 Sat>
+*Chapter 02: Use of E-Utilities*
+
+Ray LeClair <2024-07-06 Sat>
 
 * Objectives
 
-Since the OntoGPT ((see [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]])) ~pubmed-annotate~
-function requires a PubMed Identifier (PMID) as an argument, the
-objective of this document involves using the [[https://www.ncbi.nlm.nih.gov/books/NBK25499/][E-Utilities]] to search
-PubMed for a given title.
+Since the OntoGPT ~pubmed-annotate~ function requires a PubMed
+Identifier (PMID) as an argument, the objective of this document
+involves using the E-Utilities to search PubMed for a given title.
+
+See:
+
+- [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]]
+- [[https://www.ncbi.nlm.nih.gov/books/NBK25499/][E-Utilities]]
 
 ** Background
 
@@ -17,7 +21,7 @@ Biotechnology Information (NCBI).
 
 ** Development environment
 
-See [[file:Introduction.ipynb][Introduction.ipynb]].
+See: [[file:Introduction.ipynb][Introduction.ipynb]]
 
 *** Jupyter Notebook
 
@@ -37,7 +41,7 @@ evaluate this code block to activate the virtual environment:
 
 To begin, we import modules, and assign module scope variables:
 
-#+begin_src python :session shared :results silent :tangle ../py/E_Utilities.py
+#+begin_src python :results silent :session shared :tangle ../py/E_Utilities.py
   import logging
   import os
   from time import sleep
@@ -58,10 +62,11 @@ To begin, we import modules, and assign module scope variables:
 
 Now consider, for example, the citations provided by CELLxGENE for the
 human lung cell datasets. We looked at how to get the datasets, and
-the titles of the corresponding publications earlier (see
-[[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]):
+the titles of the corresponding publications earlier.
 
-#+begin_src python :session shared :results output
+See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
+
+#+begin_src python :results output :session shared
   from CELLxGENE import get_lung_obs_and_datasets, get_title
   try:
       lung_obs, lung_datasets = get_lung_obs_and_datasets()
@@ -71,17 +76,10 @@ the titles of the corresponding publications earlier (see
       print_exc()
 #+end_src
 
-#+RESULTS:
-: Reading unprocessed lung obs parquet
-: Reading unprocessed lung datasets parquet
-: Getting title for citation URL: https://doi.org/10.1101/2020.06.16.156042
-: Trying requests
-: Found title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells' for citation URL: https://doi.org/10.1101/2020.06.16.156042
-
 Now we can write a function using the E-Utilities to search PubMed for
 the title:
 
-#+begin_src python :session shared :results silent :tangle ../py/E_Utilities.py
+#+begin_src python :results silent :session shared :tangle ../py/E_Utilities.py
   def get_pmid_for_title(title):
       """Search PubMed using a title to find the corresponding PMID.
 
@@ -151,7 +149,7 @@ PubMed Identifiers (PMIDs) can be returned. So we need to write a
 function that returns the title for a given PMID to confirm which of
 the multiple PMIDs returned is correct as follows:
 
-#+begin_src python :session shared :results silent :tangle ../py/E_Utilities.py
+#+begin_src python :results silent :session shared :tangle ../py/E_Utilities.py
   def get_title_for_pmid(pmid):
       """Fetch from PubMed using a PMID to find the corresponding title.
 
@@ -198,17 +196,12 @@ the multiple PMIDs returned is correct as follows:
 
 Now we can get the PMID for the title:
 
-#+begin_src python :session shared :results output
+#+begin_src python :results output :session shared
   pmid = get_pmid_for_title(title)
   print(f"PMID: {pmid} found for title: {title}")
 #+end_src
 
-#+RESULTS:
-: Getting PMID for title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells'
-: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
-: {'db': 'pubmed', 'term': 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells', 'field': 'title', 'retmode': 'json', 'email': 'raymond.leclair@gmail.com', 'api_key': '10a233bf53a1db01e78bc08e59520ace5e09'}
-: Found PMID: 38540357 for title: 'Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells'
-: PMID: 38540357 found for title: Single cell transcriptomic profiling identifies molecular phenotypes of newborn human lung cells
+Next, in Chapter 03 we write a function to run NS-Forest on a dataset.
 
-Next, in [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]] we write a function to run
-NS-Forest on a dataset.
+See: [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]]
+
