@@ -71,8 +71,7 @@ Next we write the function, noting:
   child markers may improve classification results.
 
 - ~adata.var_names~ must be unique. If there is a problem, usually it
-  can be solved by assigning ~adata.var.index =
-  adata.var["ensembl_id"]~.
+  can be solved by assigning ~adata.var.index = adata.var["ensembl_id"]~.
 
 - Some datasets are too large and need to be downsampled to be run
   through the pipeline. When downsampling, be sure to have all the
