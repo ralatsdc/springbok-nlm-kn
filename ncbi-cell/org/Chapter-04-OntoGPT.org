@@ -22,7 +22,7 @@ SPIRES: Structured Prompt Interrogation and Recursive Extraction of
 Semantics, which:
 
 - Implements a Zero-Shot Learning (ZSL) approach to extracting nested
-    semantic structures from text
+  semantic structures from text
 
 - Uses OpenAI GPT models through their API
 

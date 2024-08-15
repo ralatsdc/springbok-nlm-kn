@@ -8,7 +8,7 @@ Since CELLxGENE serves as an initiating data source for the NCBI Cell
 pilot, the objectives of this document include demonstration of:
 
 - Identification of CELLxGENE datasets for a particular organism, and
-    tissue
+  tissue
 
 - Identification of publications corresponding to CELLxGENE datasets
 

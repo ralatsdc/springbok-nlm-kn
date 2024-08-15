@@ -14,14 +14,14 @@ discovery of novel diagnostic biomarkers and therapeutic targets.
 Two streams of knowledge are envisioned:
 
 - Single cell genomics data captured from existing data repositories
-    (e.g., CZI CELLxGENE, NeMO) will be analyzed to produce information
-    about cell type-specific marker genes and differential expression
-    patterns
+  (e.g., CZI CELLxGENE, NeMO) will be analyzed to produce information
+  about cell type-specific marker genes and differential expression
+  patterns
 
 - Open access peer-reviewed publications reporting results from single
-    cell genomics experiments from PubMed Central (PMC) will be
-    processed to extract information about cell type-specific marker
-    genes and differential expression patterns
+  cell genomics experiments from PubMed Central (PMC) will be
+  processed to extract information about cell type-specific marker
+  genes and differential expression patterns
 
 In both cases, the information will be linked with experiment metadata
 about species and specimen sample sources, disease states, and
@@ -43,31 +43,31 @@ simplified use of a graph database for visualization. In particular,
 goals of this document include:
 
 - Use of CELLxGENE to identify and retrieve human lung cell dataset
-    metadata, and download corresponding dataset files
+  metadata, and download corresponding dataset files
 
-    See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
+  See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
 
 - Use of the NCBI E-Utilities to identify the citation corresponding
-    to a CELLxGENE dataset in PubMed
+  to a CELLxGENE dataset in PubMed
 
-    See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
+  See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
 
 - Use of package NSForest for the discovery of minimum marker gene
-    combinations for cell type identification from single-cell RNA
-    sequencing data
+  combinations for cell type identification from single-cell RNA
+  sequencing data
 
-    See: [[file:Chapter-03-NSForest.ipynb][Chapter-03-NSforest]]
+  See: [[file:Chapter-03-NSForest.ipynb][Chapter-03-NSforest]]
 
 - Use of package OntoGPT for extracting structured information from
-    text with large language models (LLMs), instruction prompts, and
-    ontology-based grounding
+  text with large language models (LLMs), instruction prompts, and
+  ontology-based grounding
 
-    See: [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]]
+  See: [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]]
 
 - Creation, population, and display of the processing results using
-    graph database ArangoDB
+  graph database ArangoDB
 
-    See: [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
+  See: [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
 
 * Development environment
 
