@@ -77,26 +77,26 @@ Here’s how to set up your API keys:
 
 ### Python Dependencies
 
-We use Poetry to manage dependencies. Before installing dependencies, you need to have a version of Python between 3.10-3.12 installed. We choose to install 3.10 here. Follow these steps to set up your environment:
+We use Poetry to manage dependencies. Before installing dependencies, you should have Python version 3.10, 3.11, or 3.12 installed. We choose to install 3.12 here. Follow these steps to set up your environment:
 
-#### 1. Install Python 3.10
+#### 1. Install Python 3.12
 
 **For Windows:**
 
-1. Download the Python 3.10 installer from the [official Python website](https://www.python.org/downloads/release/python-31013/).
-2. Run the installer and ensure the option "Add Python 3.10 to PATH" is checked.
+1. Download the Python 3.12 installer from the [official Python website](https://www.python.org/downloads/release/python-3125/).
+2. Run the installer and ensure the option "Add Python 3.12 to PATH" is checked.
 3. Click "Install Now" and follow the prompts to complete the installation.
 
 **For macOS:**
 
 1. Open Terminal.
-2. Install Python 3.10 using Homebrew by running:
+2. Install Python 3.12 using Homebrew by running:
     ```sh
-    brew install python@3.10
+    brew install python@3.12
     ```
 3. Verify the installation by running:
     ```sh
-    python3.10 --version
+    python3.12 --version
     ```
 
 If you see the error `brew: command not found`, it means Homebrew is not installed. To fix this:
@@ -113,19 +113,19 @@ If you see the error `brew: command not found`, it means Homebrew is not install
    brew --version
    ```
 
-This should display the Homebrew version, confirming that it’s correctly installed. Run `brew install python@3.10` again to finish Python installation.
+   This should display the Homebrew version, confirming that it’s correctly installed. Run `brew install python@3.12` again to finish Python installation.
 
 **For Linux:**
 
 1. Open Terminal.
-2. Install Python 3.10 using the package manager. For example, on Ubuntu, run:
+2. Install Python 3.12 using the package manager. For example, on Ubuntu, run:
     ```sh
     sudo apt update
-    sudo apt install python3.10
+    sudo apt install python3.12
     ```
 3. Verify the installation by running:
     ```sh
-    python3.10 --version
+    python3.12 --version
     ```
 
 #### 2. Install Poetry
@@ -135,18 +135,20 @@ Poetry is used to manage project dependencies. Follow these steps to install Poe
 1. Install Poetry in a virtual environment:
 
     ```sh
-    python3.10 -m venv .poetry
+    python3.12 -m venv .poetry
     source .poetry/bin/activate
     python -m pip install -r .poetry.txt
     deactivate
     ```
+   
+Note that if you do not have Python 3.12 installed, you may need to modify these commands to point to the version of Python that is installed: e.g. `python3.10 -m venv .poetry`
 
 #### 3. Install Project Dependencies
 
 1. Create and activate a new virtual environment for the project:
 
     ```sh
-    python3.10 -m venv .venv
+    python3.12 -m venv .venv
     source .venv/bin/activate
     ```
 
@@ -156,7 +158,7 @@ Poetry is used to manage project dependencies. Follow these steps to install Poe
     .poetry/bin/poetry install
     ```
 
-These steps will ensure you have Python 3.10 and all necessary dependencies installed to work with the Jupyter Notebooks in this project.
+These steps will ensure you have Python 3.12 and all necessary dependencies installed to work with the Jupyter Notebooks in this project.
 
 
 ## Running the Notebooks
