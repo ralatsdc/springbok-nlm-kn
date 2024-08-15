@@ -147,6 +147,7 @@ def publish_ipynb_to_org(ipynb_path):
 
     # Write Org mode file
     org_path = ipynb_path.parents[1] / "org" / ipynb_path.name.replace(".ipynb", ".org")
+    print(f"Converting {ipynb_path.name} to {org_path.name}")
     with open(org_path, "w") as fp:
         for cell in data["cells"]:
             if cell["cell_type"] == "markdown":
