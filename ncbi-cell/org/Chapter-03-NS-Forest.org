@@ -66,21 +66,21 @@ To begin, we import modules, and assign module scope variables:
 Next we write the function, noting:
 
 - Some datasets have multiple annotations per sample
-    (ex. "broad<sub>celltype</sub>" and "granular<sub>celltype</sub>"). NSForest can be
-    run on multiple \\cluster<sub>header</sub>\\'s. Combining the parent and child
-    markers may improve classification results.
+  (ex. ~broad_cell_type~ and ~granular_cell_type~). NSForest can be
+  run on multiple ~cluster_header~ values. Combining the parent and
+  child markers may improve classification results.
 
-- \\~adata.var<sub>names</sub>\~ must be unique. If there is a problem, usually it
-    can be solved by assigning \\adata.var.index =
-    adata.var$$"ensembl<sub>id</sub>"$$\\.
+- ~adata.var_names~ must be unique. If there is a problem, usually it
+  can be solved by assigning ~adata.var.index =
+  adata.var["ensembl_id"]~.
 
 - Some datasets are too large and need to be downsampled to be run
-    through the pipeline. When downsampling, be sure to have all the
-    granular cluster annotations represented.
+  through the pipeline. When downsampling, be sure to have all the
+  granular cluster annotations represented.
 
 - Only run ns.pp.dendrogram() if there is no pre-defined dendrogram
-    order. This step can still be run with no effects, but the runtime
-    may increase.
+  order. This step can still be run with no effects, but the runtime
+  may increase.
 
 #+begin_src python :results silent :session shared :tangle ../py/NSForest.py
   def run_nsforest_on_file(h5ad_filename, cluster_header="cell_type"):

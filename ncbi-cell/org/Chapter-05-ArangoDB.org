@@ -32,12 +32,14 @@ An instance of ArangoDB can be run using the official Docker
 image. For example, a instance with authentication disabled can be run
 as follows:
 
-docker run \\
--e ARANGO<sub>NOAUTH</sub>=1 \\
--p 8529:8529 \\
--d \\
--v \$ARANGODB<sub>HOME</sub>:/var/lib/arangodb3 \\
-arangodb
+#+begin_src sh
+  docker run \\
+    -e ARANGO<sub>NOAUTH</sub>=1 \\
+    -p 8529:8529 \\
+    -d \\
+    -v \$ARANGODB<sub>HOME</sub>:/var/lib/arangodb3 \\
+    arangodb
+#+end_src
 
 where ~ARANGODB_HOME~ has been set to the name of the directory in
 which to persist data. Now ~python-arango~ can be used to interact
