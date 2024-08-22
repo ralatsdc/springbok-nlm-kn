@@ -52,7 +52,7 @@ See:
 
 ** Development environment
 
-See: [[file:Introduction.ipynb][Introduction.ipynb]]
+See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
 
 *** Jupyter Notebook
 

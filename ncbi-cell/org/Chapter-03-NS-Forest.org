@@ -20,7 +20,7 @@ See: [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutori
 
 ** Development environment
 
-See: [[file:Introduction.ipynb][Introduction.ipynb]]
+See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
 
 *** Jupyter Notebook
 
