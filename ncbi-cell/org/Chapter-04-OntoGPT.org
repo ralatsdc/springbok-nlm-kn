@@ -37,7 +37,7 @@ extraction on the text with SPIRES using the "Cell Type" template.
 
 ** Development environment
 
-See: [[file:Introduction.ipynb][Introduction.ipynb]]
+See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
 
 *** Jupyter Notebook
 

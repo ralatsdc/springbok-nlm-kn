@@ -39,7 +39,7 @@ Zuckerberg Initiative (CZI) repository, which demonstrate how to:
 
 ** Development environment
 
-See: [[file:Introduction.ipynb][Introduction.ipynb]]
+See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
 
 *** Jupyter Notebook
 
@@ -374,4 +374,3 @@ Next, in Chapter 02 we write functions to search PubMed for the title
 and identifiers.
 
 See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
-
