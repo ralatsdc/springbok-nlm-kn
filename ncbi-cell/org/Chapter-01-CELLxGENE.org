@@ -70,6 +70,7 @@ To begin, we import modules, and assign module scope variables:
   import logging
   import os
   import re
+  import subprocess
   from time import sleep
   from traceback import print_exc
 

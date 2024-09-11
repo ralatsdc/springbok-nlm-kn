@@ -1,0 +1,128 @@
+*Chapter 06: Use of Nextflow*
+
+Ray LeClair <2024-09-11 Wed>
+
+* Objectives
+
+The NCBI Cell pipeline calls for processing CELLxGENE data using
+NS-Forest, DEseq, and GOenrichment to produce marker, binary, and
+differentially-expressed genes and GO biological process (BP)
+enrichment information. Since use of Nextflow is planned for
+implementing these processing pipelines in a form that is platform
+agnostic and usable by researchers, the objectives of this document is
+to demonstrate how to
+
+- Use Nextflow to implement NS-Forest processing
+
+Nextflow is a workflow system for creating scalable, portable, and
+reproducible workflows. Based on the dataflow programming model,
+Nextflow deploys workflows on a variety of execution platforms,
+including your local machine, HPC schedulers, AWS Batch, Azure Batch,
+Google Cloud Batch, and Kubernetes, and supports Conda, Spack, Docker,
+Podman, Singularity, and more.
+
+See: [[https://www.nextflow.io/docs/latest/index.html#][Nextflow]]
+
+** Development environment
+
+Nextflow is distributed as a self-installing package, and can be used
+on any POSIX-compatible system (Linux, macOS, etc), and on Windows
+through WSL. It requires Bash 3.2 (or later) and Java 11 (or later, up
+to 22) to be installed. The Nextflow documentation provides the details.
+
+See: [[https://www.nextflow.io/docs/latest/install.html#][Installation]]
+
+* Use Nextflow to implement NS-Forest processing
+
+In order to use Nextflow to implement NS-Forest processing, it is
+necessary to:
+
+- Create a module in the NSForest repository with the necessary
+  functions
+
+- Write a Docker file to create an image with the NSForest repository
+  and its dependencies
+
+- Write Nextflow scripts to define processes and workflows
+
+** Create a module in the NSForest repository
+
+Module ~nsforest.py~ was created on branch
+~rl/deconstruct-nextflow-script~ in fork ~ralatsdc/NSForest~ of
+~JCVenterInstitute/NSForest~ to encapsulate the following functions:
+
+- ~run_nsforest_on_file()~: Runs NSForest using the specified dataset
+  filepath, and ~cluster_header~, including all preprocessing steps
+
+- ~downsample_adata_file()~: Calculates quality control metrics, and
+  sums total counts for each cell to downsample, if needed
+
+- ~generate_scanpy_dendrogram()~: Generates a dendrogram of the
+  categories defined in grouping by ~cluster_header~
+
+- ~calculate_cluster_medians_per_gene()~: Calculates the median
+  expression matrix
+
+- ~calculate_binary_scores_per_gene_per_cluster()~: Calculates the
+  binary scores of each gene per ~cluster_header~
+
+- ~run_nsforest()~: Performs the main NS-Forest algorithm to find a
+  list of markers for each ~cluster_header~, assuming all
+  preprocessing steps were completed earlier
+
+See:
+
+- [[https://github.com/ralatsdc/NSForest/blob/rl/deconstruct-nextflow-script/nsforest.py][nsforest.py]]
+- [[https://github.com/ralatsdc/NSForest/tree/rl/deconstruct-nextflow-script][ralatsdc/NSForest]]
+- [[https://github.com/JCVenterInstitute/NSForest][JCVenterInstitute/NSForest]]
+
+** Write a Docker file
+
+A Dockerfile based on an image with Conda installed was created in
+repository ~ralatsdc/nsforest-docker~. The base images uses the
+~.bashrc~ startup file to initialize Conda and activate the Conda
+environment when running the image using Docker. However, Nextflow
+ignores this bash startup file, and so cannot activate the Conda
+environment using the ~conda~ process directive. As a result, the path
+to the ~bin~ directory of the Conda environment is added to ~PATH~ in
+the image. Finally, note that the repository contains a number of
+convenience scripts to build, push, and run the image.
+
+See: [[https://github.com/ralatsdc/nsforest-docker/blob/main/Dockerfile][ralatsdc/nsforest-docker/Dockerfile]]
+
+** Write Nextflow scripts
+
+Two Nextflow scripts were written on branch
+~rl/add-single-and-multiple-process-nextflow-workflows~ of
+~ralatsdc/springbok-ncbi-cell~:
+
+- ~nsforest-single-process.nf~: Calls function
+  ~run_nsforest_on_file()~ to process input CELLxGENE H5AD files using
+  NS-Forest
+
+- ~nsforest-multiple-processes.nf~: Calls in order functions
+  ~downsample_adata_file()~, ~generate_scanpy_dendrogram()~,
+  ~calculate_cluster_medians_per_gene()~,
+  ~calculate_binary_scores_per_gene_per_cluster()~, ~run_nsforest()~
+  to process input CELLxGENE H5AD files using NS-Forest
+
+The scripts are run at the command line using Nextflow. For example,
+run the first script and print a help message as follows:
+
+#+begin_src sh
+  nextflow run nsforest-single-process.nf --help
+#+end_src
+
+Note that the scripts use the ~nextflow.config~ file implicitly which
+enables Docker and specifies the container and its options.
+
+The advantage of the multiple, over the single, process version
+centers around the flexibility of constructing alternative workflows,
+and leveraging Nextflow's ability to distribute the work load.
+
+See:
+
+- [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-single-process.nf][nsforest-single-process.nf]]
+- [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-multiple-processes.nf][nsforest-multiple-processes.nf]]
+- [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nextflow.config][nextflow.config]]
+

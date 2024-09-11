@@ -63,7 +63,14 @@ Here’s how to set up your API keys:
    Save the file and exit the editor. In `nano`, you can do this by pressing `CTRL + X`, then `Y` to confirm, and `Enter` to save.
 
 
-4. **Apply the Changes**
+   See:
+
+   - [API keys for E-Utilities](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/)
+   - [OpenAI platform](https://openai.com/api/)
+   - [OpenAI project API keys](https://platform.openai.com/api-keys)
+   - [BioPortal](https://bioportal.bioontology.org/login)
+
+3. **Apply the Changes**
 
    For the changes to take effect, you need to reload the `.zshenv` file. You can do this by running:
 

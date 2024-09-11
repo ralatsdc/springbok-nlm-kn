@@ -458,3 +458,11 @@ Note that all of the database objects created can be deleted as follows:
   delete_database(database_name)
 #+end_src
 
+Next, in Chapter 06 we'll use Nextflow to process CELLxGENE H5AD files
+using NS-Forest.
+
+See:
+
+- [[file:Chapter-06-Nextflow.ipynb][Chapter-06-Nextflow.ipynb]]
+- [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]]
+
