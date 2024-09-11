@@ -142,5 +142,4 @@ populate an ArangoDB database graph.
 See:
 
 - [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
-- [[file:Chapter-03-NS-Forest.org][Chapter-03-NS-Forest.org]]
-
+- [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]]
