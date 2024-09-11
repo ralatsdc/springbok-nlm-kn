@@ -7,7 +7,7 @@ Ray LeClair <2024-09-11 Wed>
 The NCBI Cell pipeline calls for processing CELLxGENE data using
 NS-Forest, DEseq, and GOenrichment to produce marker, binary, and
 differentially-expressed genes and GO biological process (BP)
-enrichment information.  Since use of Nextflow is planned for
+enrichment information. Since use of Nextflow is planned for
 implementing these processing pipelines in a form that is platform
 agnostic and usable by researchers, the objectives of this document is
 to demonstrate how to
@@ -52,22 +52,22 @@ Module ~nsforest.py~ was created on branch
 ~JCVenterInstitute/NSForest~ to encapsulate the following functions:
 
 - ~run_nsforest_on_file()~: Runs NSForest using the specified dataset
-  filepath, and cluster_header, including all preprocessing steps
+  filepath, and ~cluster_header~, including all preprocessing steps
 
 - ~downsample_adata_file()~: Calculates quality control metrics, and
   sums total counts for each cell to downsample, if needed
-    
+
 - ~generate_scanpy_dendrogram()~: Generates a dendrogram of the
-  categories defined in grouping by cluster_header
+  categories defined in grouping by ~cluster_header~
 
 - ~calculate_cluster_medians_per_gene()~: Calculates the median
   expression matrix
 
 - ~calculate_binary_scores_per_gene_per_cluster()~: Calculates the
-  binary scores of each gene per `cluster_header`
+  binary scores of each gene per ~cluster_header~
 
 - ~run_nsforest()~: Performs the main NS-Forest algorithm to find a
-  list of markers for each `cluster_header`, assuming all
+  list of markers for each ~cluster_header~, assuming all
   preprocessing steps were completed earlier
 
 See:
@@ -125,3 +125,4 @@ See:
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-single-process.nf][nsforest-single-process.nf]]
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-multiple-processes.nf][nsforest-multiple-processes.nf]]
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nextflow.config][nextflow.config]]
+
