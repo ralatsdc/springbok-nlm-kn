@@ -106,23 +106,47 @@ Two Nextflow scripts were written on branch
   ~calculate_binary_scores_per_gene_per_cluster()~, ~run_nsforest()~
   to process input CELLxGENE H5AD files using NS-Forest
 
-The scripts are run at the command line using Nextflow. For example,
-run the first script and print a help message as follows:
+The scripts are run at the command line in the
+~springbok-ncbi-cell/ncbi-cell/nf~ directory using Nextflow. For
+example, run the single process script to print a help message as
+follows:
 
 #+begin_src sh
   nextflow run nsforest-single-process.nf --help
 #+end_src
 
-Note that the scripts use the ~nextflow.config~ file implicitly which
+Note that the scripts implicitly use the ~nextflow.config~ file which
 enables Docker and specifies the container and its options.
 
 The advantage of the multiple, over the single, process version
 centers around the flexibility of constructing alternative workflows,
 and leveraging Nextflow's ability to distribute the work load.
 
+Note that Docker is not required to run these Nextflow
+scripts. Provided that the path to ~nsforest.py~ has been added to the
+~PATH~ environment variable, and a project virtual environment
+activated, then the single process script can be run without Docker
+using the ~nextflow-without-docker.config~ file, which is empty, as
+follows:
+
+#+begin_src sh
+  nextflow run -c nextflow-without-docker.config nsforest-single-process.nf --h5adPath '../data/cellxgene-sample/*.H5AD'
+#+end_src
+
+The path to ~nsforest.py~ can be added to the ~PATH~ environment
+variable as follows:
+
+#+begin_src sh
+  export PATH=$PATH:$PWD
+#+end_src
+
+The repository README describes how to create and activate a project
+virtual environment.
+
 See:
 
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-single-process.nf][nsforest-single-process.nf]]
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-multiple-processes.nf][nsforest-multiple-processes.nf]]
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nextflow.config][nextflow.config]]
+- [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
 
