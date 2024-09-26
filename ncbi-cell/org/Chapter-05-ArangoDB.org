@@ -33,11 +33,11 @@ image. For example, a instance with authentication disabled can be run
 as follows:
 
 #+begin_src sh
-  docker run \\
-    -e ARANGO<sub>NOAUTH</sub>=1 \\
-    -p 8529:8529 \\
-    -d \\
-    -v \$ARANGODB<sub>HOME</sub>:/var/lib/arangodb3 \\
+  docker run \
+    -e ARANGO_NOAUTH=1 \
+    -p 8529:8529 \
+    -d \
+    -v \$ARANGODB<sub>HOME</sub>:/var/lib/arangodb3 \
     arangodb
 #+end_src
 
