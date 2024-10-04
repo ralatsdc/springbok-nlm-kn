@@ -110,7 +110,7 @@ Three Nextflow scripts are included in
 - ~nsforest-parallel-by-cluster.nf~: Calls ~preprocess_adata_file()~
   then ~run_nsforest_without_preprocessing()~ to process input
   CELLxGENE H5AD files using NS-Forest by cluster
-  
+
 The scripts are run at the command line in the
 ~springbok-ncbi-cell/ncbi-cell/nf~ directory using Nextflow. For
 example, run the single process script to print a help message as
@@ -149,3 +149,4 @@ See:
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nsforest-multiple-processes.nf][nsforest-multiple-processes.nf]]
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/rl/add-single-and-multiple-process-nextflow-workflows/ncbi-cell/nf/nextflow.config][nextflow.config]]
 - [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
+
