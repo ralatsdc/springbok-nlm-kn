@@ -14,34 +14,52 @@ import ArangoDB as adb
 vertex_names = ["CARO", "CHEBI", "CL", "GO", "PATO", "PR", "UBERON"]
 
 from_to_vertex_name_sets = [
+    ("CHEBI", "BFO"),
+    ("CHEBI", "PR"),
+    ("CL", "BFO"),
     ("CL", "CL"),
     ("CL", "GO"),
     ("CL", "PR"),
     ("CL", "UBERON"),
+    ("GO", "BFO"),
+    ("GO", "CARO"),
     ("GO", "GO"),
     ("GO", "PR"),
     ("GO", "UBERON"),
+    ("IAO", "BFO"),
+    ("IAO", "IAO"),
+    ("PATO", "BFO"),
     ("PATO", "PATO"),
+    ("PR", "BFO"),
+    ("PR", "CHEBI"),
+    ("PR", "GO"),
     ("PR", "PR"),
+    ("RO", "BFO"),
+    ("UBERON", "BFO"),
+    ("UBERON", "GO"),
     ("UBERON", "PR"),
     ("UBERON", "UBERON"),
 ]
 
+vertices = {}
+edges = {}
+
 vertex_collections = {}
 edge_collections = {}
 
+adb.delete_database("BioPortal")
 db = adb.create_or_get_database("BioPortal")
-
-graph = adb.delete_graph(db, "CL")
 graph = adb.create_or_get_graph(db, "CL")
 
 for vertex_name in vertex_names:
+    vertices[vertex_name] = []
     vertex_collections[vertex_name] = adb.create_or_get_vertex_collection(
         graph, vertex_name
     )
 
 for from_vertex_name, to_vertex_name in from_to_vertex_name_sets:
     edge_name = f"{from_vertex_name}-{to_vertex_name}"
+    edges[edge_name] = []
     edge_collections[edge_name], _ = adb.create_or_get_edge_collection(
         graph, from_vertex_name, to_vertex_name
     )
@@ -125,7 +143,9 @@ for class_elm in root.iter(f"{owl}Class"):
 
         d = {"_key": number, "term": term, "uriref": uriref, "label": label}
 
-        vertex_collections[id].insert(d)
+        vertices[id].append(d)
+
+        # vertex_collections[id].insert(d)
 
 
 graph = Graph()
@@ -134,6 +154,11 @@ graph.parse(str(bioportal_dir / cl_slim_fnm))
 type_s = set()
 type_p = set()
 type_o = set()
+
+bnode_s = []
+bnode_o = []
+
+bnode_t = {}
 
 unique_p = set()
 
@@ -152,6 +177,17 @@ for s, p, o in graph:
         count_p[p] = 1
     else:
         count_p[p] += 1
+
+    if isinstance(s, BNode):
+        bnode_s.append(s)
+
+        if s not in bnode_t:
+            bnode_t[s] = []
+        else:
+            bnode_t[s].append((s, p, o))
+
+    if isinstance(o, BNode):
+        bnode_o.append(o)
 
     if (
         isinstance(s, URIRef)
@@ -173,7 +209,9 @@ for s, p, o in graph:
             "predicate": "IS_A",
         }
 
-        edge_collections[f"{s_id}-{o_id}"].insert(d)
+        edges[f"{s_id}-{o_id}"].append(d)
+
+        # edge_collections[f"{s_id}-{o_id}"].insert(d)
 
 # print(type_s)
 # print(type_p)
