@@ -64,7 +64,6 @@ for from_vertex_name, to_vertex_name in from_to_vertex_name_sets:
         graph, from_vertex_name, to_vertex_name
     )
 
-
 uriref_pattern = re.compile(r"/obo/([A-Z]*)_([A-Z0-9]*)")
 
 
@@ -213,11 +212,11 @@ for s, p, o in graph:
 
         # edge_collections[f"{s_id}-{o_id}"].insert(d)
 
-# print(type_s)
-# print(type_p)
-# print(type_o)
+print(type_s)
+print(type_p)
+print(type_o)
 
-# for p in unique_p:
-#     print(p)
+for p in unique_p:
+    print(p)
 
-# pprint.pprint(count_p)
+pprint.pprint(count_p)
