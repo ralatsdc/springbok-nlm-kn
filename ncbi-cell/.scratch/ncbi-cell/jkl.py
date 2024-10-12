@@ -22,6 +22,9 @@ PREDICATE_CLASSES = {
     "OMO_0002000": "defined by construct",
     "RO_0002161": "never in taxon",
     "RO_0002175": "present in taxon",
+    "RO_0002215": "capable of",
+    "RO_0002202": "develops from",
+    "RO_0002315": "results in acquisition of features of",
     "RO_0004050": "is negative form of",
 }
 
@@ -82,30 +85,35 @@ def parse_term(term):
 
         oid = match.group(1)
         if oid == "GOREL":
-            warn("Invalid Ontology ID: 'GOREL'")
-            return tuple()
+            print("Invalid Ontology ID: 'GOREL' for term: {term}")
+            return None, None, None, None, None
+
         number = match.group(2)
         if len(oid) == 0 or len(number) == 0:
-            warn(f"Did not match ontology id or number for: {term}")
-            return tuple()
+            warn(f"Did not match ontology id or number for term: {term}")
+            return None, None, None, None, None
+
         term = f"{oid}_{number}"
 
         if term in PREDICATE_CLASSES:
-            return (oid, number, term, PREDICATE_CLASSES[term])
+            return oid, number, term, PREDICATE_CLASSES[term], "class"
 
         else:
-            return (oid, number, term)
+            return oid, number, term, None, "class"
 
     elif fragment != "":
-        return (fragment,)
+        return None, None, None, fragment, "predicate"
 
     else:
-        return (Path(path).stem,)
+        return None, None, None, Path(path).stem, "literal"
 
 
 def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o):
 
-    if not isinstance(s, URIRef) or isinstance(o, Literal):
+    # if not isinstance(s, URIRef) or isinstance(o, Literal):
+    #     return
+
+    if isinstance(o, Literal):
         return
 
     # (rdflib.term.URIRef, rdflib.term.URIRef, rdflib.term.URIRef)
@@ -136,7 +144,7 @@ def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o):
                 "_key": vertex_key,
                 "term": vertex_term,
             }
-            print(vertex)
+            # print(vertex)
             vertex_collections[vertex_name].insert(vertex)
 
         vertices.append(vertex_collections[vertex_name].get(vertex_key))
@@ -164,6 +172,7 @@ def create_or_get_edge_from_triple(
         from_vertex_key = s_tuple[0]
         from_vertex_term = "none"
     else:
+        # print(f"Skipping triple due to subject: {(s, p, o)}")
         return
     if from_vertex_name not in vertex_collections:
         vertex_collections[from_vertex_name] = adb.create_or_get_vertex_collection(
@@ -174,7 +183,7 @@ def create_or_get_edge_from_triple(
             "_key": from_vertex_key,
             "term": from_vertex_term,
         }
-        print(vertex)
+        # print(vertex)
         vertex_collections[from_vertex_name].insert(vertex)
 
     p_tuple = parse_term(p)
@@ -183,6 +192,7 @@ def create_or_get_edge_from_triple(
     elif len(p_tuple) == 4:
         predicate = p_tuple[3]
     else:
+        # print(f"Skipping triple due to predicate: {(s, p, o)}")
         return
 
     o_tuple = parse_term(o)
@@ -193,6 +203,7 @@ def create_or_get_edge_from_triple(
         to_vertex_key = o_tuple[0]
         to_vertex_term = "none"
     else:
+        # print(f"Skipping triple due to object: {(s, p, o)}")
         return
     if to_vertex_name not in vertex_collections:
         vertex_collections[to_vertex_name] = adb.create_or_get_vertex_collection(
@@ -203,7 +214,7 @@ def create_or_get_edge_from_triple(
             "_key": to_vertex_key,
             "term": to_vertex_term,
         }
-        print(vertex)
+        # print(vertex)
         vertex_collections[to_vertex_name].insert(vertex)
 
     edge_name = f"{from_vertex_name}-{to_vertex_name}"
@@ -221,7 +232,7 @@ def create_or_get_edge_from_triple(
             "_to": f"{to_vertex_name}/{to_vertex_key}",
             "label": predicate,
         }
-        print(edge)
+        # print(edge)
         edge_collections[edge_name].insert(edge)
 
     return vertex_collections, edge_collections
@@ -229,7 +240,10 @@ def create_or_get_edge_from_triple(
 
 def update_vertex_from_triple(vertex_collections, s, p, o):
 
-    if not isinstance(s, URIRef) or not isinstance(o, Literal):
+    # if not isinstance(s, URIRef) or not isinstance(o, Literal):
+    #     return
+
+    if not isinstance(o, Literal):
         return
 
     # (rdflib.term.URIRef, rdflib.term.URIRef, rdflib.term.URIRef)
@@ -239,6 +253,7 @@ def update_vertex_from_triple(vertex_collections, s, p, o):
     p_tuple = parse_term(p)
 
     if not (len(s_tuple) == 3 and (len(p_tuple) == 1 or len(p_tuple) == 4)):
+        # print(f"Skipping triple due to subject or predicate tuple lengths: {(s, p, o)}")
         return
 
     vertex_name, vertex_key, _ = s_tuple
@@ -248,6 +263,7 @@ def update_vertex_from_triple(vertex_collections, s, p, o):
     elif len(p_tuple) == 4:
         predicate = p_tuple[3]
     else:
+        # print(f"Skipping triple due to predicate tuple lengths: {(s, p, o)}")
         return
 
     if isinstance(o.value, datetime.datetime):
@@ -329,49 +345,83 @@ if __name__ == "__main__":
     bioportal_dir = Path(
         "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
     )
-    # cl_fnm = "cl.owl"
-    cl_fnm = "general_cell_types_upper_slim.owl"
 
-    rdf_graph = Graph()
-    rdf_graph.parse(str(bioportal_dir / cl_fnm))
+    ontologies = {
+        # "CL-OWL": {
+        #     "filename": "general_cell_types_upper_slim.owl",
+        #     "database": "BioPortal-OWL",
+        #     "graph": "CL-OWL",
+        #     },  # Loaded
+        "CL-RDF": {
+            "filename": "general_cell_types_upper_slim.rdf",
+            "database": "BioPortal-RDF",
+            "graph": "CL-RDF",
+            },  # Did not load
+        # "CL-INFERRED-OWL": {
+        #     "filename": "general_cell_types_upper_slim_inferred.owl",
+        #     "database": "BioPortal-INFERRED-OWL",
+        #     "graph": "CL-INFERRED-OWL",
+        #     },  # Did not load
+        # "CL-INFERRED-RDF": {
+        #     "filename": "general_cell_types_upper_slim_inferred.rdf",
+        #     "database": "BioPortal-INFERRED-RDF",
+        #     "graph": "CL-INFERRED-RDF",
+        #     },
+    }
+    for k, v in ontologies.items():
+        rdf_graph = Graph()
+        rdf_graph.parse(str(bioportal_dir / v["filename"]))
 
-    adb.delete_database("BioPortal")
-    db = adb.create_or_get_database("BioPortal")
-    adb_graph = adb.create_or_get_graph(db, "CL")
+        triple_types = count_triple_types(rdf_graph)
+        print(v["filename"])
+        pprint(triple_types)
 
-    vertex_collections = {}
-    edge_collections = {}
+        adb.delete_database(v["database"])
+        db = adb.create_or_get_database(v["database"])
+
+        adb.delete_graph(db, v["graph"])
+        adb_graph = adb.create_or_get_graph(db, v["graph"])
+
+        vertex_collections = {}
+        edge_collections = {}
+
+        load_rdf_graph_into_adb_graph(
+            rdf_graph,
+            adb_graph,
+            vertex_collections,
+            edge_collections,
+        )
+
+        # for bnode_vertex in vertex_collections["BNode"]:
+        #     load_rdf_graph_into_adb_graph(
+        #         rdf_graph,
+        #         adb_graph,
+        #         vertex_collections,
+        #         edge_collections,
+        #         term=BNode(bnode_vertex["_key"]),
+        #     )
 
     # print_triples_with_term(rdf_graph, URIRef("http://purl.obolibrary.org/obo/CL_0000235"))
 
-    load_rdf_graph_into_adb_graph(
-        rdf_graph,
-        adb_graph,
-        vertex_collections,
-        edge_collections,
-        term=URIRef("http://purl.obolibrary.org/obo/CL_0000235"),
-    )
-
     # input("Hit return to continue?")
 
-    do_add_bnodes = True
-    while do_add_bnodes:
-        for bnode_vertex in vertex_collections["BNode"]:
-            load_rdf_graph_into_adb_graph(
-                rdf_graph,
-                adb_graph,
-                vertex_collections,
-                edge_collections,
-                term=BNode(bnode_vertex["_key"]),
-            )
-        # do_add_bnodes = input("Continue? [Y/n]: ") != "n"
-        do_add_bnodes = False
+    # do_add_bnodes = True
+    # while do_add_bnodes:
+    #     for bnode_vertex in vertex_collections["BNode"]:
+    #         load_rdf_graph_into_adb_graph(
+    #             rdf_graph,
+    #             adb_graph,
+    #             vertex_collections,
+    #             edge_collections,
+    #             term=BNode(bnode_vertex["_key"]),
+    #         )
+    #     do_add_bnodes = input("Continue? [Y/n]: ") != "n"
+    #     # do_add_bnodes = False
 
-
-    for edge_name, edge_collection in edge_collections.items():
-        if 'BNode' not in edge_name or edge_name == 'BNode-BNode':
-            continue
-        for edge in edge_collection:
-            print(edge)
+    # for edge_name, edge_collection in edge_collections.items():
+    #     if 'BNode' not in edge_name or edge_name == 'BNode-BNode':
+    #         continue
+    #     for edge in edge_collection:
+    #         print(edge)
 
     # print_triples_with_term(rdf_graph, BNode("Nf3b88ff808404a80a0b7f29036ba8fa7"))
