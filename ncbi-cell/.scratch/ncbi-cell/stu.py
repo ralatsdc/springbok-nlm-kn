@@ -6,6 +6,164 @@ from rdflib.term import BNode, Literal, URIRef
 
 from jkl import parse_term, PREDICATE_CLASSES
 
+
+def collect_fnode_triples(graph):
+
+    triples = []
+
+    for s, p, o in graph:
+
+        if isinstance(s, BNode) or isinstance(o, BNode):
+            continue
+
+        triples.append((s, p, o))
+
+    return triples
+
+
+def collect_bnode_triple_sets(graph, triple_sets, use="subject"):
+
+    for s, p, o in graph:
+
+        if isinstance(s, BNode) and isinstance(o, BNode):
+            continue
+
+        if use == "subject":
+            n = s
+        elif use == "object":
+            n = o
+        else:
+            raise Exception("Must use 'subject' or 'object'")
+
+        if not isinstance(n, BNode):
+            continue
+
+        if n not in triple_sets:
+            triple_sets[n] = {}
+            triple_sets[n]["relation"] = []
+            triple_sets[n]["annotation"] = []
+            triple_sets[n]["literal"] = []
+            triple_sets[n]["class"] = []
+            triple_sets[n]["other"] = []
+
+        _, _, _, _, s_term_type = parse_term(s)
+        _, _, _, p_fragment, _ = parse_term(p)
+        _, _, _, _, o_term_type = parse_term(o)
+
+        if p_fragment in ["someValuesFrom", "onProperty", "subClassOf"]:
+            triple_sets[n]["relation"].append((s, p, o))
+
+        elif p_fragment in ["annotatedSource", "annotatedProperty", "annotatedTarget"]:
+            triple_sets[n]["annotation"].append((s, p, o))
+
+        elif p_fragment in ["hasDbXref", "source"]:
+            triple_sets[n]["literal"].append((s, p, o))
+
+        elif s_term_type == "class" or o_term_type == "class":
+            triple_sets[n]["class"].append((s, p, o))
+
+        else:
+            triple_sets[n]["other"].append((s, p, o))
+
+
+def get_fnode(s, o):
+
+    if isinstance(s, BNode) and isinstance(o, BNode):
+        raise Exception("Both s and o are blank")
+
+    if not isinstance(s, BNode) and not isinstance(o, BNode):
+        raise Exception("Both s and o are filled")
+
+    if isinstance(s, BNode):
+        return o
+    else:
+        return s
+
+
+def create_bnode_triples_from_bnode_triple_set(triple_set, set_type):
+
+    if set_type == "relation":
+        s_p_fragment = "someValuesFrom"
+        p_p_fragment = "onProperty"
+        o_p_fragment = "subClassOf"
+
+    elif set_type == "annotation":
+        s_p_fragment = "annotatedSource"
+        p_p_fragment = "annotatedProperty"
+        o_p_fragment = "annotatedTarget"
+
+    else:
+        raise Exception("Set type must be 'relation' or 'annotation'")
+
+    bnode_triples = []
+    ignored_triples = []
+
+    if len(triple_set[set_type]) == 3:
+
+        created_s = None
+        created_p = None
+        created_o = None
+
+        for s, p, o in triple_set[set_type]:
+
+            _, _, _, p_fragment, _ = parse_term(p)
+
+            if p_fragment == s_p_fragment:
+                created_s = get_fnode(s, o)
+
+            if p_fragment == p_p_fragment:
+                created_p = get_fnode(s, o)
+
+            if p_fragment == o_p_fragment:
+                created_o = get_fnode(s, o)
+
+        if created_s and created_p and created_o:
+            bnode_triples.append((created_s, created_p, created_o))
+            if set_type == "annotation":
+                for s, p, o in triple_set["literal"]:
+                    bnode_triples.append((created_s, p, o))
+
+        else:
+            pprint(f"Invalid triple_set['{set_type}']: {triple_set[set_type]}")
+            ignored_triples.extend(triple_set[set_type])
+            if set_type == "annotation":
+                ignored_triples.extend(triple_set["literal"])
+
+    elif len(triple_set[set_type]) != 0:
+        ignored_triples.extend(triple_set[set_type])
+        if set_type == "annotation":
+            ignored_triples.extend(triple_set["literal"])
+
+    return bnode_triples, ignored_triples
+
+
+def create_bnode_triples_from_bnode_triple_sets(triple_sets):
+
+    bnode_triples = []
+    ignored_triples = []
+
+    for bnode, triple_set in triple_sets.items():
+
+        relation_bnode_triples, relation_ignored_triples = (
+            create_bnode_triples_from_bnode_triple_set(triple_set, "relation")
+        )
+
+        bnode_triples.extend(relation_bnode_triples)
+        ignored_triples.extend(relation_ignored_triples)
+
+        annotation_bnode_triples, annotation_ignored_triples = (
+            create_bnode_triples_from_bnode_triple_set(triple_set, "annotation")
+        )
+
+        bnode_triples.extend(annotation_bnode_triples)
+        ignored_triples.extend(annotation_ignored_triples)
+
+        ignored_triples.extend(triple_set["class"])
+        ignored_triples.extend(triple_set["other"])
+
+    return bnode_triples, ignored_triples
+
+
 if __name__ == "__main__":
 
     bioportal_dir = Path(
@@ -42,84 +200,13 @@ if __name__ == "__main__":
         except Exception as exc:
             print(f"Could not parse {v['filename']}: {exc}")
 
-        n_triples = 0
-        n_triples_with_one_bnode = 0
-        n_triples_with_double_bnodes = 0
+        fnode_triples = collect_fnode_triples(v["graph"])
 
-        triple_sets = {}
+        bnode_triple_sets = {}
 
-        for s, p, o in v["graph"]:
-            n_triples += 1
+        collect_bnode_triple_sets(v["graph"], bnode_triple_sets, use="subject")
+        collect_bnode_triple_sets(v["graph"], bnode_triple_sets, use="object")
 
-            if isinstance(s, BNode) and isinstance(o, BNode):
-                n_triples_with_double_bnodes += 1
-                continue
-
-            if isinstance(s, BNode):
-                if s not in triple_sets:
-                    n_triples_with_one_bnode += 1
-                    triple_sets[s] = {}
-                    triple_sets[s]["relation"] = []
-                    triple_sets[s]["annotation"] = []
-                    triple_sets[s]["literal"] = []
-                    triple_sets[s]["class"] = []
-                    triple_sets[s]["other"] = []
-
-                _, _, _, _, s_term_type = parse_term(s)
-                _, _, _, fragment, _ = parse_term(p)
-                _, _, _, _, o_term_type = parse_term(o)
-
-                if fragment in ["someValuesFrom", "onProperty", "subClassOf"]:
-                    triple_sets[s]["relation"].append((s, p, o))
-
-                elif fragment in ["annotatedProperty", "annotatedTarget", "annotatedSource"]:
-                    triple_sets[s]["annotation"].append((s, p, o))
-
-                elif fragment in ["hasDbXref", "source"]:
-                    triple_sets[s]["literal"].append((s, p, o))
-
-                elif s_term_type == "class" or o_term_type == "class":
-                    triple_sets[s]["class"].append((s, p, o))
-
-                else:
-                    triple_sets[s]["other"].append((s, p, o))
-
-        for s, p, o in v["graph"]:
-
-            if isinstance(s, BNode) and isinstance(o, BNode):
-                continue
-
-            if isinstance(o, BNode):
-                if o not in triple_sets:
-                    n_triples_with_one_bnode += 1
-                    triple_sets[o] = {}
-                    triple_sets[o]["relation"] = []
-                    triple_sets[o]["annotation"] = []
-                    triple_sets[o]["literal"] = []
-                    triple_sets[o]["class"] = []
-                    triple_sets[o]["other"] = []
-
-                _, _, _, _, s_term_type = parse_term(s)
-                _, _, _, fragment, _ = parse_term(p)
-                _, _, _, _, o_term_type = parse_term(o)
-
-                if fragment in ["someValuesFrom", "onProperty", "subClassOf"]:
-                    triple_sets[o]["relation"].append((s, p, o))
-
-                elif fragment in ["annotatedProperty", "annotatedTarget", "annotatedSource"]:
-                    triple_sets[o]["annotation"].append((s, p, o))
-
-                elif fragment in ["hasDbXref", "source"]:
-                    triple_sets[o]["literal"].append((s, p, o))
-
-                elif s_term_type == "class" or o_term_type == "class":
-                    triple_sets[o]["class"].append((s, p, o))
-
-                else:
-                    triple_sets[o]["other"].append((s, p, o))
-
-        pprint(triple_sets)
-
-        print(f"n_triples: {n_triples}")
-        print(f"n_triples_with_one_bnode: {n_triples_with_one_bnode}")
-        print(f"n_triples_with_double_bnodes: {n_triples_with_double_bnodes}")
+        bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
+            bnode_triple_sets
+        )
