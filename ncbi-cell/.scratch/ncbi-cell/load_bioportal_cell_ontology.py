@@ -44,7 +44,7 @@ def collect_fnode_triples(rdf_graph):
     return triples
 
 
-def parse_term(term, ols=None):
+def parse_term(term, ro=None):
 
     path = urlparse(term).path
     fragment = urlparse(term).fragment
@@ -65,8 +65,8 @@ def parse_term(term, ols=None):
 
         term = f"{oid}_{number}"
 
-        if ols is not None and term in ols:
-            return oid, number, term, ols[term], "class"
+        if ro is not None and term in ro:
+            return oid, number, term, ro[term], "class"
 
         else:
             return oid, number, term, None, "class"
@@ -78,7 +78,7 @@ def parse_term(term, ols=None):
         return None, None, None, Path(path).stem, "literal"
 
 
-def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ols=None):
+def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ro=None):
 
     for s, p, o in rdf_graph:
 
@@ -105,9 +105,9 @@ def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ols=None):
             triple_sets[n]["class"] = []
             triple_sets[n]["other"] = []
 
-        _, _, _, _, s_term_type = parse_term(s, ols)
-        _, _, _, p_fragment, _ = parse_term(p, ols)
-        _, _, _, _, o_term_type = parse_term(o, ols)
+        _, _, _, _, s_term_type = parse_term(s, ro=ro)
+        _, _, _, p_fragment, _ = parse_term(p, ro=ro)
+        _, _, _, _, o_term_type = parse_term(o, ro=ro)
 
         if p_fragment in ["someValuesFrom", "onProperty", "subClassOf"]:
             triple_sets[n]["relation"].append((s, p, o))
@@ -140,15 +140,15 @@ def get_fnode(s, o):
         return s
 
 
-def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ols=None):
+def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ro=None):
 
     bnode_triples = []
     ignored_triples = []
 
     if set_type == "relation":
-        s_p_fragment = "someValuesFrom"
+        s_p_fragment = "subClassOf"
         p_p_fragment = "onProperty"
-        o_p_fragment = "subClassOf"
+        o_p_fragment = "someValuesFrom"
 
     elif set_type == "annotation":
         s_p_fragment = "annotatedSource"
@@ -166,7 +166,7 @@ def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ols=None):
 
         for s, p, o in triple_set[set_type]:
 
-            _, _, _, p_fragment, _ = parse_term(p, ols=ols)
+            _, _, _, p_fragment, _ = parse_term(p, ro=ro)
 
             if p_fragment == s_p_fragment:
                 created_s = get_fnode(s, o)
@@ -201,7 +201,7 @@ def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ols=None):
     return bnode_triples, ignored_triples
 
 
-def create_bnode_triples_from_bnode_triple_sets(triple_sets, ols=None):
+def create_bnode_triples_from_bnode_triple_sets(triple_sets, ro=None):
 
     bnode_triples = []
     ignored_triples = []
@@ -209,16 +209,14 @@ def create_bnode_triples_from_bnode_triple_sets(triple_sets, ols=None):
     for bnode, triple_set in triple_sets.items():
 
         relation_bnode_triples, relation_ignored_triples = (
-            create_bnode_triples_from_bnode_triple_set(triple_set, "relation", ols=ols)
+            create_bnode_triples_from_bnode_triple_set(triple_set, "relation", ro=ro)
         )
 
         bnode_triples.extend(relation_bnode_triples)
         ignored_triples.extend(relation_ignored_triples)
 
         annotation_bnode_triples, annotation_ignored_triples = (
-            create_bnode_triples_from_bnode_triple_set(
-                triple_set, "annotation", ols=ols
-            )
+            create_bnode_triples_from_bnode_triple_set(triple_set, "annotation", ro=ro)
         )
 
         bnode_triples.extend(annotation_bnode_triples)
@@ -272,16 +270,43 @@ def parse_ols(ols_dir, ols_fnm):
     return ols, ids
 
 
-def create_or_get_vertices_from_triple(
-    adb_graph, vertex_collections, s, p, o, ols=None
-):
+def create_or_get_vertex(vertex_collections, vertex_name, vertex_key, vertex_term):
+
+    if vertex_name not in VALID_VERTICES:
+        print(f"Skipping invalid vertex name: {vertex_name}")
+        return
+
+    vertex = {}
+
+    if vertex_name not in vertex_collections:
+        vertex_collections[vertex_name] = adb.create_or_get_vertex_collection(
+            adb_graph, vertex_name
+        )
+
+    if not vertex_collections[vertex_name].has(vertex_key):
+        vertex = {
+            "_key": vertex_key,
+            "term": vertex_term,
+        }
+        vertex_collections[vertex_name].insert(vertex)
+
+    else:
+        vertex = vertex_collections[vertex_name].get(vertex_key)
+
+    return vertex
+
+
+def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):
 
     if isinstance(o, Literal):
+        print(f"Skipping literal object in triple: {(s, p, o)}")
         return
 
     vertices = []
+
     for term in [s, o]:
-        oid, number, term, fragment, term_type = parse_term(term, ols=ols)
+
+        oid, number, term, fragment, term_type = parse_term(term, ro=ro)
 
         if term_type != "class":
             continue
@@ -290,85 +315,48 @@ def create_or_get_vertices_from_triple(
         vertex_key = number
         vertex_term = term
 
-        if vertex_name not in VALID_VERTICES:
-            continue
+        vertex = create_or_get_vertex(
+            vertex_collections, vertex_name, vertex_key, vertex_term
+        )
 
-        if vertex_name not in vertex_collections:
-            vertex_collections[vertex_name] = adb.create_or_get_vertex_collection(
-                adb_graph, vertex_name
-            )
+        if vertex is None:
+            # Message printed in previous function call
+            return
 
-        if not vertex_collections[vertex_name].has(vertex_key):
-            vertex = {
-                "_key": vertex_key,
-                "term": vertex_term,
-            }
-            vertex_collections[vertex_name].insert(vertex)
+        vertices.append(vertex)
 
-        vertices.append(vertex_collections[vertex_name].get(vertex_key))
-
-    return vertex_collections
+    return vertices
 
 
-def create_or_get_edge_from_triple(
-    adb_graph, vertex_collections, edge_collections, s, p, o, ols=None
+def create_or_get_edge(
+    vertex_collections,
+    edge_collections,
+    from_vertex_name,
+    from_vertex_key,
+    from_vertex_term,
+    to_vertex_name,
+    to_vertex_key,
+    to_vertex_term,
+    predicate,
 ):
 
-    if isinstance(o, Literal):
+    from_vertex = create_or_get_vertex(
+        vertex_collections, from_vertex_name, from_vertex_key, from_vertex_term
+    )
+
+    if from_vertex is None:
+        # Message printed in previous function call
         return
 
-    s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ols=ols)
+    to_vertex = create_or_get_vertex(
+        vertex_collections, to_vertex_name, to_vertex_key, to_vertex_term
+    )
 
-    if s_term_type != "class":
+    if to_vertex is None:
+        # Message printed in previous function call
         return
 
-    from_vertex_name = s_oid
-    from_vertex_key = s_number
-    from_vertex_term = s_term
-
-    if from_vertex_name not in VALID_VERTICES:
-        return
-
-    if from_vertex_name not in vertex_collections:
-        vertex_collections[from_vertex_name] = adb.create_or_get_vertex_collection(
-            adb_graph, from_vertex_name
-        )
-    if not vertex_collections[from_vertex_name].has(from_vertex_key):
-        vertex = {
-            "_key": from_vertex_key,
-            "term": from_vertex_term,
-        }
-        vertex_collections[from_vertex_name].insert(vertex)
-
-    p_oid, p_number, p_term, p_fragment, p_term_type = parse_term(p, ols=ols)
-
-    if not (p_term_type == "predicate" or (p_term_type == "class" and p_fragment is not None)):
-        return
-
-    predicate = p_fragment
-
-    o_oid, o_number, o_term, o_fragment, o_term_type = parse_term(o, ols=ols)
-
-    if o_term_type != "class" and o_term_type != "literal":
-        return
-
-    to_vertex_name = o_oid
-    to_vertex_key = o_number
-    to_vertex_term = o_term
-
-    if to_vertex_name not in VALID_VERTICES:
-        return
-
-    if to_vertex_name not in vertex_collections:
-        vertex_collections[to_vertex_name] = adb.create_or_get_vertex_collection(
-            adb_graph, to_vertex_name
-        )
-    if not vertex_collections[to_vertex_name].has(to_vertex_key):
-        vertex = {
-            "_key": to_vertex_key,
-            "term": to_vertex_term,
-        }
-        vertex_collections[to_vertex_name].insert(vertex)
+    edge = {}
 
     edge_name = f"{from_vertex_name}-{to_vertex_name}"
     edge_key = f"{from_vertex_key}-{to_vertex_key}"
@@ -387,81 +375,145 @@ def create_or_get_edge_from_triple(
         }
         edge_collections[edge_name].insert(edge)
 
-    return vertex_collections, edge_collections
+    else:
+        edge = edge_collections[edge_name].get(edge_key)
+
+    return edge
 
 
-def update_vertex_from_triple(vertex_collections, s, p, o, ols=None):
+def create_or_get_edge_from_triple(
+    adb_graph, vertex_collections, edge_collections, s, p, o, ro=None
+):
 
-    if not isinstance(o, Literal):
+    if isinstance(o, Literal):
+        print(f"Skipping literal object in triple: {(s, p, o)}")
         return
 
-    s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ols=ols)
+    s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
 
     if s_term_type != "class":
+        print(f"Skipping invalid subject type in triple: {(s, p, o)}")
+        return
+
+    from_vertex_name = s_oid
+    from_vertex_key = s_number
+    from_vertex_term = s_term
+
+    p_oid, p_number, p_term, p_fragment, p_term_type = parse_term(p, ro=ro)
+
+    if not (
+        p_term_type == "predicate"
+        or (p_term_type == "class" and p_fragment is not None)
+    ):
+        print(f"Skipping invalid predicate type in triple: {(s, p, o)}")
+        return
+
+    predicate = p_fragment
+
+    o_oid, o_number, o_term, o_fragment, o_term_type = parse_term(o, ro=ro)
+
+    if o_term_type != "class" and o_term_type != "literal":
+        print(f"Skipping invalid object type in triple: {(s, p, o)}")
+        return
+
+    to_vertex_name = o_oid
+    to_vertex_key = o_number
+    to_vertex_term = o_term
+
+    edge = create_or_get_edge(
+        vertex_collections,
+        edge_collections,
+        from_vertex_name,
+        from_vertex_key,
+        from_vertex_term,
+        to_vertex_name,
+        to_vertex_key,
+        to_vertex_term,
+        predicate,
+    )
+
+    return edge
+
+
+def update_vertex_from_triple(vertex_collections, s, p, o, ro=None):
+
+    if not isinstance(o, Literal):
+        print(f"Skipping non-literal object in triple: {(s, p, o)}")
+        return
+
+    s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
+
+    if s_term_type != "class":
+        print(f"Skipping invalid subject type in triple: {(s, p, o)}")
         return
 
     vertex_name = s_oid
     vertex_key = s_number
     vertex_term = s_term
 
-    if vertex_name not in VALID_VERTICES:
+    vertex = create_or_get_vertex(
+        vertex_collections, vertex_name, vertex_key, vertex_term
+    )
+
+    if vertex is None:
+        # Message printed in previous function call
         return
 
-    p_oid, p_number, p_term, p_fragment, p_term_type = parse_term(p, ols=ols)
+    p_oid, p_number, p_term, p_fragment, p_term_type = parse_term(p, ro=ro)
 
-    if p_term_type != "predicate":
+    if not (
+        p_term_type == "predicate"
+        or (p_term_type == "class" and p_fragment is not None)
+    ):
+        print(f"Skipping invalid predicate type in triple: {(s, p, o)}")
         return
 
     predicate = p_fragment
 
     if isinstance(o.value, datetime):
         value = str(o.value)
+
     else:
         value = o.value
 
-    if vertex_name in vertex_collections and vertex_collections[vertex_name].has(
-        vertex_key
-    ):
-        vertex = vertex_collections[vertex_name].get(vertex_key)
-        if not predicate in vertex:
-            vertex[predicate] = value
-        else:
-            if not isinstance(vertex[predicate], list):
-                vertex[predicate] = [vertex[predicate]]
-            vertex[predicate].append(value)
-        vertex_collections[vertex_name].update(vertex)
-        return vertex
+    if not predicate in vertex:
+        vertex[predicate] = value
 
     else:
-        return
+        if not isinstance(vertex[predicate], list):
+            vertex[predicate] = [vertex[predicate]]
+        if value not in vertex[predicate]:
+            vertex[predicate].append(value)
+
+    vertex_collections[vertex_name].update(vertex)
+
+    return vertex
 
 
 def load_triples_into_adb_graph(
-    triples, adb_graph, vertex_collections, edge_collections, ols=None
+    triples, adb_graph, vertex_collections, edge_collections, ro=None
 ):
 
     for s, p, o in triples:
 
         create_or_get_vertices_from_triple(
-            adb_graph, vertex_collections, s, p, o, ols=ols
+            adb_graph, vertex_collections, s, p, o, ro=ro
         )
         create_or_get_edge_from_triple(
-            adb_graph, vertex_collections, edge_collections, s, p, o, ols=ols
+            adb_graph, vertex_collections, edge_collections, s, p, o, ro=ro
         )
 
     for s, p, o in triples:
 
-        update_vertex_from_triple(vertex_collections, s, p, o, ols=ols)
-
-    return vertex_collections, edge_collections
+        update_vertex_from_triple(vertex_collections, s, p, o, ro=ro)
 
 
 if __name__ == "__main__":
 
     ols_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/ols"
-    ols_fnm = "ro.owl"
 
-    ols, _ = parse_ols(ols_dir, ols_fnm)
+    ro_fnm = "ro.owl"
+    ro, _ = parse_ols(ols_dir, ro_fnm)
 
     bioportal_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
     cl_fnm = "general_cell_types_upper_slim.owl"
@@ -483,11 +535,14 @@ if __name__ == "__main__":
 
     bnode_triple_sets = {}
 
-    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ols=ols)
-    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ols=ols)
+    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
+    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
+
+    with open("bnode_triple_sets.txt", "w") as fp:
+        pprint(bnode_triple_sets, fp)
 
     bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
-        bnode_triple_sets, ols=ols
+        bnode_triple_sets, ro=ro
     )
 
     with open("bnode_triples.txt", "w") as fp:
@@ -509,5 +564,5 @@ if __name__ == "__main__":
     edge_collections = {}
 
     load_triples_into_adb_graph(
-        fnode_triples, adb_graph, vertex_collections, edge_collections, ols=ols
+        fnode_triples, adb_graph, vertex_collections, edge_collections, ro=ro
     )
