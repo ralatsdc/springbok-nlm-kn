@@ -10,6 +10,7 @@ from rdflib import Graph
 from rdflib.term import BNode, Literal, URIRef
 
 URIREF_PATTERN = re.compile(r"/obo/([A-Za-z]*)_([A-Z0-9]*)")
+
 PREDICATE_CLASSES = {
     "IAO_0000028": "symbol",
     "IAO_0000115": "definition",
