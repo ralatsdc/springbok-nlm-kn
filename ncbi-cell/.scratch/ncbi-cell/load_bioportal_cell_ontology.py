@@ -273,7 +273,7 @@ def parse_ols(ols_dir, ols_fnm):
 def create_or_get_vertex(vertex_collections, vertex_name, vertex_key, vertex_term):
 
     if vertex_name not in VALID_VERTICES:
-        print(f"Skipping invalid vertex name: {vertex_name}")
+        # print(f"Skipping invalid vertex name: {vertex_name}")
         return
 
     vertex = {}
@@ -299,7 +299,7 @@ def create_or_get_vertex(vertex_collections, vertex_name, vertex_key, vertex_ter
 def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):
 
     if isinstance(o, Literal):
-        print(f"Skipping literal object in triple: {(s, p, o)}")
+        # print(f"Skipping literal object in triple: {(s, p, o)}")
         return
 
     vertices = []
@@ -386,7 +386,7 @@ def create_or_get_edge_from_triple(
 ):
 
     if isinstance(o, Literal):
-        print(f"Skipping literal object in triple: {(s, p, o)}")
+        # print(f"Skipping literal object in triple: {(s, p, o)}")
         return
 
     s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
@@ -438,7 +438,7 @@ def create_or_get_edge_from_triple(
 def update_vertex_from_triple(vertex_collections, s, p, o, ro=None):
 
     if not isinstance(o, Literal):
-        print(f"Skipping non-literal object in triple: {(s, p, o)}")
+        # print(f"Skipping non-literal object in triple: {(s, p, o)}")
         return
 
     s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
@@ -516,6 +516,7 @@ if __name__ == "__main__":
     ro, _ = parse_ols(ols_dir, ro_fnm)
 
     bioportal_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
+    cl_fnm = "cl.owl"
     cl_fnm = "general_cell_types_upper_slim.owl"
 
     _, ids = parse_ols(bioportal_dir, cl_fnm)
@@ -551,7 +552,7 @@ if __name__ == "__main__":
 
     fnode_triples.extend(bnode_triples)
 
-    db_name = "BioPortal"
+    db_name = "BioPortal-Slim"
     graph_name = "CL"
 
     adb.delete_database(db_name)
