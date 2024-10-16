@@ -11,7 +11,7 @@ from rdflib.term import BNode, Literal
 
 
 URIREF_PATTERN = re.compile(r"/obo/([A-Za-z]*)_([A-Z0-9]*)")
-VALID_VERTICES = ["UBERON", "CL", "GO", "NCBITaxon", "PR", "PATO"]
+VALID_VERTICES = ["UBERON", "CL", "GO", "NCBITaxon", "PR", "PATO", "CHEBI"]
 
 
 def count_triple_types(rdf_graph):
@@ -56,11 +56,13 @@ def parse_term(term, ro=None):
         oid = match.group(1)
         if oid == "GOREL":
             print(f"Invalid Ontology ID: 'GOREL' for term: {term}")
+            ofp.write(f"Invalid Ontology ID: 'GOREL' for term: {term}\n")
             return None, None, None, None, None
 
         number = match.group(2)
         if len(oid) == 0 or len(number) == 0:
             print(f"Did not match ontology id or number for term: {term}")
+            ofp.write(f"Did not match ontology id or number for term: {term}\n")
             return None, None, None, None, None
 
         term = f"{oid}_{number}"
@@ -187,6 +189,7 @@ def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ro=None):
 
         else:
             pprint(f"Invalid triple_set['{set_type}']: {triple_set[set_type]}")
+            ofp.write(f"Invalid triple_set['{set_type}']: {triple_set[set_type]}\n")
             ignored_triples.extend(triple_set[set_type])
 
             if set_type == "annotation":
@@ -273,7 +276,8 @@ def parse_ols(ols_dir, ols_fnm):
 def create_or_get_vertex(vertex_collections, vertex_name, vertex_key, vertex_term):
 
     if vertex_name not in VALID_VERTICES:
-        # print(f"Skipping invalid vertex name: {vertex_name}")
+        print(f"Skipping invalid vertex name: {vertex_name}")
+        ofp.write(f"Skipping invalid vertex name: {vertex_name}\n")
         return
 
     vertex = {}
@@ -300,6 +304,7 @@ def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o, r
 
     if isinstance(o, Literal):
         # print(f"Skipping literal object in triple: {(s, p, o)}")
+        # ofp.write(f"Skipping literal object in triple: {(s, p, o)}\n")
         return
 
     vertices = []
@@ -387,12 +392,14 @@ def create_or_get_edge_from_triple(
 
     if isinstance(o, Literal):
         # print(f"Skipping literal object in triple: {(s, p, o)}")
+        # ofp.write(f"Skipping literal object in triple: {(s, p, o)}\n")
         return
 
     s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
 
     if s_term_type != "class":
         print(f"Skipping invalid subject type in triple: {(s, p, o)}")
+        ofp.write(f"Skipping invalid subject type in triple: {(s, p, o)}\n")
         return
 
     from_vertex_name = s_oid
@@ -406,6 +413,7 @@ def create_or_get_edge_from_triple(
         or (p_term_type == "class" and p_fragment is not None)
     ):
         print(f"Skipping invalid predicate type in triple: {(s, p, o)}")
+        ofp.write(f"Skipping invalid predicate type in triple: {(s, p, o)}\n")
         return
 
     predicate = p_fragment
@@ -414,6 +422,7 @@ def create_or_get_edge_from_triple(
 
     if o_term_type != "class" and o_term_type != "literal":
         print(f"Skipping invalid object type in triple: {(s, p, o)}")
+        ofp.write(f"Skipping invalid object type in triple: {(s, p, o)}\n")
         return
 
     to_vertex_name = o_oid
@@ -439,12 +448,14 @@ def update_vertex_from_triple(vertex_collections, s, p, o, ro=None):
 
     if not isinstance(o, Literal):
         # print(f"Skipping non-literal object in triple: {(s, p, o)}")
+        # ofp.write(f"Skipping non-literal object in triple: {(s, p, o)}\n")
         return
 
     s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
 
     if s_term_type != "class":
         print(f"Skipping invalid subject type in triple: {(s, p, o)}")
+        ofp.write(f"Skipping invalid subject type in triple: {(s, p, o)}\n")
         return
 
     vertex_name = s_oid
@@ -466,6 +477,7 @@ def update_vertex_from_triple(vertex_collections, s, p, o, ro=None):
         or (p_term_type == "class" and p_fragment is not None)
     ):
         print(f"Skipping invalid predicate type in triple: {(s, p, o)}")
+        ofp.write(f"Skipping invalid predicate type in triple: {(s, p, o)}\n")
         return
 
     predicate = p_fragment
@@ -512,58 +524,84 @@ if __name__ == "__main__":
 
     ols_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/ols"
 
-    ro_fnm = "ro.owl"
-    ro, _ = parse_ols(ols_dir, ro_fnm)
-
     bioportal_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
-    cl_fnm = "cl.owl"
-    cl_fnm = "general_cell_types_upper_slim.owl"
 
-    _, ids = parse_ols(bioportal_dir, cl_fnm)
-    print(ids)
+    ontologies = [
+        {
+            "cl_name": "general_cell_types_upper_slim.owl",
+            "db_name": "BioPortal-Slim",
+            "graph_name": "CL-Slim",
+        },
+        {"cl_name": "cl.owl", "db_name": "BioPortal-Full", "graph_name": "CL-Full"},
+    ]
 
-    rdf_graph = Graph()
-    rdf_graph.parse(Path(bioportal_dir) / cl_fnm)
+    for ontology in ontologies:
 
-    triple_types = count_triple_types(rdf_graph)
-    pprint(triple_types)
+        cl_fnm = ontology["cl_name"]
 
-    fnode_triples = collect_fnode_triples(rdf_graph)
+        out_fnm = cl_fnm.replace(".owl", ".log")
+        ofp = open(out_fnm, "w")
 
-    with open("fnode_triples.txt", "w") as fp:
-        for fnode_triple in fnode_triples:
-            fp.write(str(fnode_triple) + "\n")
+        ro_fnm = "ro.owl"
+        ro, _ = parse_ols(ols_dir, ro_fnm)
 
-    bnode_triple_sets = {}
+        _, ids = parse_ols(bioportal_dir, cl_fnm)
+        print(ids)
+        ofp.write(str(ids) + "\n")
 
-    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
-    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
+        rdf_graph = Graph()
+        rdf_graph.parse(Path(bioportal_dir) / cl_fnm)
 
-    with open("bnode_triple_sets.txt", "w") as fp:
-        pprint(bnode_triple_sets, fp)
+        triples_fnm = cl_fnm.replace(".owl", "_triples.txt")
+        with open(triples_fnm, "w") as fp:
+            for triple in rdf_graph:
+                fp.write(str(triple) + "\n")
 
-    bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
-        bnode_triple_sets, ro=ro
-    )
+        triple_types = count_triple_types(rdf_graph)
+        pprint(triple_types)
+        pprint(triple_types, ofp)
 
-    with open("bnode_triples.txt", "w") as fp:
-        for bnode_triple in bnode_triples:
-            fp.write(str(bnode_triple) + "\n")
+        fnode_triples = collect_fnode_triples(rdf_graph)
 
-    fnode_triples.extend(bnode_triples)
+        fnode_triples_fnm = cl_fnm.replace(".owl", "_fnode_triples.txt")
+        with open(fnode_triples_fnm, "w") as fp:
+            for fnode_triple in fnode_triples:
+                fp.write(str(fnode_triple) + "\n")
 
-    db_name = "BioPortal-Slim"
-    graph_name = "CL"
+        bnode_triple_sets = {}
 
-    adb.delete_database(db_name)
-    db = adb.create_or_get_database(db_name)
+        collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
+        collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
 
-    adb.delete_graph(db, graph_name)
-    adb_graph = adb.create_or_get_graph(db, graph_name)
+        bnode_triple_sets_fnm = cl_fnm.replace(".owl", "_bnode_triple_sets.txt")
+        with open(bnode_triple_sets_fnm, "w") as fp:
+            pprint(bnode_triple_sets, fp)
 
-    vertex_collections = {}
-    edge_collections = {}
+        bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
+            bnode_triple_sets, ro=ro
+        )
 
-    load_triples_into_adb_graph(
-        fnode_triples, adb_graph, vertex_collections, edge_collections, ro=ro
-    )
+        bnode_triples_fnm = cl_fnm.replace(".owl", "_bnode_triples.txt")
+        with open(bnode_triples_fnm, "w") as fp:
+            for bnode_triple in bnode_triples:
+                fp.write(str(bnode_triple) + "\n")
+
+        fnode_triples.extend(bnode_triples)
+
+        db_name = ontology["db_name"]
+        graph_name = ontology["graph_name"]
+
+        adb.delete_database(db_name)
+        db = adb.create_or_get_database(db_name)
+
+        adb.delete_graph(db, graph_name)
+        adb_graph = adb.create_or_get_graph(db, graph_name)
+
+        vertex_collections = {}
+        edge_collections = {}
+
+        load_triples_into_adb_graph(
+            fnode_triples, adb_graph, vertex_collections, edge_collections, ro=ro
+        )
+
+        ofp.close()

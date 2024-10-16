@@ -11,9 +11,12 @@
 *.csv
 *.H5AD
 *.h5ad
+*.log
+*.log.*
 *.out
 *.parquet
 *.pickle
+*.txt
 __pycache__
 data/
 poetry
