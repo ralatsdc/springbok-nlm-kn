@@ -527,12 +527,17 @@ if __name__ == "__main__":
     bioportal_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
 
     ontologies = [
-        {
-            "cl_name": "general_cell_types_upper_slim.owl",
-            "db_name": "BioPortal-Slim",
-            "graph_name": "CL-Slim",
-        },
-        {"cl_name": "cl.owl", "db_name": "BioPortal-Full", "graph_name": "CL-Full"},
+        # {
+        #     "cl_name": "general_cell_types_upper_slim.owl",
+        #     "db_name": "BioPortal-Slim",
+        #     "graph_name": "CL-Slim",
+        # },
+        # {"cl_name": "cl.owl", "db_name": "BioPortal-Full", "graph_name": "CL-Full"},
+        # {
+        #     "cl_name": "owlapi.xml",
+        #     "db_name": "BioPortal-Full-RDF",
+        #     "graph_name": "CL-Full-RDF",
+        # },
     ]
 
     for ontology in ontologies:
@@ -552,9 +557,11 @@ if __name__ == "__main__":
         rdf_graph = Graph()
         rdf_graph.parse(Path(bioportal_dir) / cl_fnm)
 
+        triples = []
         triples_fnm = cl_fnm.replace(".owl", "_triples.txt")
         with open(triples_fnm, "w") as fp:
             for triple in rdf_graph:
+                triples.append(triple)
                 fp.write(str(triple) + "\n")
 
         triple_types = count_triple_types(rdf_graph)
