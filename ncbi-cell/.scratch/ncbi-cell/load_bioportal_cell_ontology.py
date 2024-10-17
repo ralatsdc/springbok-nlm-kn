@@ -76,6 +76,12 @@ def parse_term(term, ro=None):
     elif fragment != "":
         return None, None, None, fragment, "predicate"
 
+    elif isinstance(term, BNode):
+        oid = "BNode"
+        number = Path(path).stem
+        term = f"{oid}_{number}"
+        return oid, number, term, None, "class"
+
     else:
         return None, None, None, Path(path).stem, "literal"
 
@@ -311,7 +317,7 @@ def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o, r
 
     for term in [s, o]:
 
-        oid, number, term, fragment, term_type = parse_term(term, ro=ro)
+        oid, number, term, _fragment, term_type = parse_term(term, ro=ro)
 
         if term_type != "class":
             continue
@@ -395,7 +401,7 @@ def create_or_get_edge_from_triple(
         # ofp.write(f"Skipping literal object in triple: {(s, p, o)}\n")
         return
 
-    s_oid, s_number, s_term, s_fragment, s_term_type = parse_term(s, ro=ro)
+    s_oid, s_number, s_term, _s_fragment, s_term_type = parse_term(s, ro=ro)
 
     if s_term_type != "class":
         print(f"Skipping invalid subject type in triple: {(s, p, o)}")
@@ -406,7 +412,7 @@ def create_or_get_edge_from_triple(
     from_vertex_key = s_number
     from_vertex_term = s_term
 
-    p_oid, p_number, p_term, p_fragment, p_term_type = parse_term(p, ro=ro)
+    _p_oid, _p_number, _p_term, p_fragment, p_term_type = parse_term(p, ro=ro)
 
     if not (
         p_term_type == "predicate"
@@ -418,7 +424,7 @@ def create_or_get_edge_from_triple(
 
     predicate = p_fragment
 
-    o_oid, o_number, o_term, o_fragment, o_term_type = parse_term(o, ro=ro)
+    o_oid, o_number, o_term, _o_fragment, o_term_type = parse_term(o, ro=ro)
 
     if o_term_type != "class" and o_term_type != "literal":
         print(f"Skipping invalid object type in triple: {(s, p, o)}")
@@ -522,44 +528,47 @@ def load_triples_into_adb_graph(
 
 if __name__ == "__main__":
 
-    ols_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/ols"
+    ols_dirname = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/ols"
 
-    bioportal_dir = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
+    bioportal_dirname = "/Users/raymondleclair/Projects/NLM/NLM-KB/springbok-ncbi-cell/ncbi-cell/data/bioportal"
 
     ontologies = [
-        # {
-        #     "cl_name": "general_cell_types_upper_slim.owl",
-        #     "db_name": "BioPortal-Slim",
-        #     "graph_name": "CL-Slim",
-        # },
-        # {"cl_name": "cl.owl", "db_name": "BioPortal-Full", "graph_name": "CL-Full"},
-        # {
-        #     "cl_name": "owlapi.xml",
-        #     "db_name": "BioPortal-Full-RDF",
-        #     "graph_name": "CL-Full-RDF",
-        # },
+        {
+            "cl_filename": "general_cell_types_upper_slim.owl",
+            "db_name": "BioPortal-BNode",
+            "graph_name": "CL-BNode",
+        },
+        {
+            "cl_filename": "general_cell_types_upper_slim.owl",
+            "db_name": "BioPortal-Slim",
+            "graph_name": "CL-Slim",
+        },
+        # {"cl_filename": "cl.owl", "db_name": "BioPortal-Full", "graph_name": "CL-Full"},
     ]
 
     for ontology in ontologies:
 
-        cl_fnm = ontology["cl_name"]
+        cl_filename = ontology["cl_filename"]
+        db_name = ontology["db_name"]
+        graph_name = ontology["graph_name"]
 
-        out_fnm = cl_fnm.replace(".owl", ".log")
-        ofp = open(out_fnm, "w")
+        log_filename = f"{graph_name}.log"
 
-        ro_fnm = "ro.owl"
-        ro, _ = parse_ols(ols_dir, ro_fnm)
+        ofp = open(log_filename, "w")
 
-        _, ids = parse_ols(bioportal_dir, cl_fnm)
+        ro_filename = "ro.owl"
+        ro, _ = parse_ols(ols_dirname, ro_filename)
+
+        _, ids = parse_ols(bioportal_dirname, cl_filename)
         print(ids)
         ofp.write(str(ids) + "\n")
 
         rdf_graph = Graph()
-        rdf_graph.parse(Path(bioportal_dir) / cl_fnm)
+        rdf_graph.parse(Path(bioportal_dirname) / cl_filename)
 
         triples = []
-        triples_fnm = cl_fnm.replace(".owl", "_triples.txt")
-        with open(triples_fnm, "w") as fp:
+        triples_filename = log_filename.replace(".log", "_triples.txt")
+        with open(triples_filename, "w") as fp:
             for triple in rdf_graph:
                 triples.append(triple)
                 fp.write(str(triple) + "\n")
@@ -570,8 +579,8 @@ if __name__ == "__main__":
 
         fnode_triples = collect_fnode_triples(rdf_graph)
 
-        fnode_triples_fnm = cl_fnm.replace(".owl", "_fnode_triples.txt")
-        with open(fnode_triples_fnm, "w") as fp:
+        fnode_triples_filename = log_filename.replace(".log", "_fnode_triples.txt")
+        with open(fnode_triples_filename, "w") as fp:
             for fnode_triple in fnode_triples:
                 fp.write(str(fnode_triple) + "\n")
 
@@ -580,23 +589,22 @@ if __name__ == "__main__":
         collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
         collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
 
-        bnode_triple_sets_fnm = cl_fnm.replace(".owl", "_bnode_triple_sets.txt")
-        with open(bnode_triple_sets_fnm, "w") as fp:
+        bnode_triple_sets_filename = log_filename.replace(
+            ".log", "_bnode_triple_sets.txt"
+        )
+        with open(bnode_triple_sets_filename, "w") as fp:
             pprint(bnode_triple_sets, fp)
 
         bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
             bnode_triple_sets, ro=ro
         )
 
-        bnode_triples_fnm = cl_fnm.replace(".owl", "_bnode_triples.txt")
-        with open(bnode_triples_fnm, "w") as fp:
+        bnode_triples_filename = log_filename.replace(".log", "_bnode_triples.txt")
+        with open(bnode_triples_filename, "w") as fp:
             for bnode_triple in bnode_triples:
                 fp.write(str(bnode_triple) + "\n")
 
         fnode_triples.extend(bnode_triples)
-
-        db_name = ontology["db_name"]
-        graph_name = ontology["graph_name"]
 
         adb.delete_database(db_name)
         db = adb.create_or_get_database(db_name)
@@ -607,8 +615,13 @@ if __name__ == "__main__":
         vertex_collections = {}
         edge_collections = {}
 
+        if db_name == "BioPortal-BNode":
+            VALID_VERTICES.extend(["BNode", "RO"])
+            triples_to_populate = triples
+        else:
+            triples_to_populate = fnode_triples
         load_triples_into_adb_graph(
-            fnode_triples, adb_graph, vertex_collections, edge_collections, ro=ro
+            triples_to_populate, adb_graph, vertex_collections, edge_collections, ro=ro
         )
 
         ofp.close()
