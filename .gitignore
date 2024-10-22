@@ -11,8 +11,7 @@
 *.csv
 *.H5AD
 *.h5ad
-*.log
-*.log.*
+*.log*
 *.out
 *.parquet
 *.pickle
