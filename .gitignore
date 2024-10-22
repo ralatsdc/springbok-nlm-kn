@@ -12,10 +12,14 @@
 *.H5AD
 *.h5ad
 *.log*
+<<<<<<< HEAD
 *.txt
+=======
+>>>>>>> main
 *.out
 *.parquet
 *.pickle
+*.txt
 __pycache__
 data/
 poetry
