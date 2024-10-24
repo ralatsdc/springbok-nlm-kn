@@ -14,7 +14,7 @@ if [ ! -f results-from-test/cluster_results.csv ]; then
     echo "Results from test not found"
     echo "Running NS-Forest ..."
     source ../../.venv/bin/activate
-    ./nsforest.py --run-nsforest-on-file -c cluster -d results-from-test/ ../data/cellxgene-test/adata_layer1.h5ad
+    ./nsforest.py --run-nsforest-with-preprocessing -c cluster -d results-from-test/ ./data-for-test/adata_layer1.h5ad
 else 
    echo "Results from test found"
 fi
