@@ -71,11 +71,11 @@ Then recall that in [[file:Chapter-02-E-Utilities.org][Chapter-02-E-Utilities.or
 PMID for a title:
 
 #+begin_src python :results output :session shared
-  from CELLxGENE import get_lung_obs_and_datasets, get_title
+  from CELLxGENE import get_metadata_and_datasets, get_title
   from E_Utilities import get_pmid_for_title
   try:
-      lung_obs, lung_datasets = get_lung_obs_and_datasets()
-      citation = lung_datasets["citation"].iloc[4]
+      datasets, counts, var, obs = get_metadata_and_datasets()
+      citation = datasets["citation"].iloc[4]
       title = get_title(citation)
       pmid = get_pmid_for_title(title)
   except Exception:
