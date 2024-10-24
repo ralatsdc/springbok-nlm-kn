@@ -19,16 +19,16 @@ The Entrez Programming Utilities (E-utilities) provide a stable API
 into the Entrez query and database system at the National Center for
 Biotechnology Information (NCBI).
 
-*** Development environment
+The following sections describe various development environments
 
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
+See: [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-**** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-**** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:

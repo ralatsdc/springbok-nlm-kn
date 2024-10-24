@@ -21,7 +21,12 @@ including your local machine, HPC schedulers, AWS Batch, Azure Batch,
 Google Cloud Batch, and Kubernetes, and supports Conda, Spack, Docker,
 Podman, Singularity, and more.
 
-See: [[https://www.nextflow.io/docs/latest/index.html#][Nextflow]]
+The following section describes various development environments
+
+See:
+
+- [[https://www.nextflow.io/docs/latest/index.html#][Nextflow]]
+- [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
 *** Development environment
 

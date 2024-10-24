@@ -16,18 +16,19 @@ pipeline, the objective of this document is to:
 The NS-Forest repository contains a tutorial that walks through all
 aspects of using NS-Forest.
 
-See: [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]]
+The following sections describe various development environments
 
-*** Development environment
+See:
 
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
+- [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]]
+- [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-**** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-**** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:

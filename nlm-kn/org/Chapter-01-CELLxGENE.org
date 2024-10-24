@@ -38,16 +38,16 @@ Zuckerberg Initiative (CZI) repository, which demonstrate how to:
 
 - [[https://github.com/chanzuckerberg/single-cell-curation/blob/0c77179d2e794846861f8109c037b723507959cb/notebooks/curation_api/python_raw/get_dataset.ipynb][Fetch full metadata for a Dataset]]
 
-*** Development environment
+The following sections describe various development environments
 
 See: [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-**** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-**** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:

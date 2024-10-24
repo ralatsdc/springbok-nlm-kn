@@ -45,21 +45,20 @@ where ~ARANGODB_HOME~ has been set to the name of the directory in
 which to persist data. Now ~python-arango~ can be used to interact
 with the database system using Python.
 
+The following sections describe various development environments
+
 See:
 
 - [[https://hub.docker.com/_/arangodb][ArangoDB Docker image]]
 - [[https://docs.python-arango.com/en/main/#][python-arango]]
+- [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-*** Development environment
-
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
-
-**** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-**** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:
