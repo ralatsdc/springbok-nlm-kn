@@ -1,8 +1,8 @@
-*Chapter 06: Use of Nextflow*
+* Chapter 06: Use of Nextflow
 
 Ray LeClair <2024-09-11 Wed>
 
-* Objectives
+** Objectives
 
 The NCBI Cell pipeline calls for processing CELLxGENE data using
 NS-Forest, DEseq, and GOenrichment to produce marker, binary, and
@@ -23,7 +23,7 @@ Podman, Singularity, and more.
 
 See: [[https://www.nextflow.io/docs/latest/index.html#][Nextflow]]
 
-** Development environment
+*** Development environment
 
 Nextflow is distributed as a self-installing package, and can be used
 on any POSIX-compatible system (Linux, macOS, etc), and on Windows
@@ -32,7 +32,7 @@ to 22) to be installed. The Nextflow documentation provides the details.
 
 See: [[https://www.nextflow.io/docs/latest/install.html#][Installation]]
 
-* Use Nextflow to implement NS-Forest processing
+** Use Nextflow to implement NS-Forest processing
 
 In order to use Nextflow to implement NS-Forest processing, it is
 necessary to:
@@ -45,7 +45,7 @@ necessary to:
 
 - Write Nextflow scripts to define processes and workflows
 
-** Create a module in the NSForest repository
+*** Create a module in the NSForest repository
 
 Module ~nsforest.py~ was created on branch
 ~rl/deconstruct-nextflow-script~ in fork ~ralatsdc/NSForest~ of
@@ -77,7 +77,7 @@ See:
 - [[https://github.com/ralatsdc/NSForest/tree/rl/deconstruct-nextflow-script][ralatsdc/NSForest]]
 - [[https://github.com/JCVenterInstitute/NSForest][JCVenterInstitute/NSForest]]
 
-** Write a Docker file
+*** Write a Docker file
 
 A Dockerfile based on an image with Conda installed was created in
 repository ~ralatsdc/nsforest-docker~. The base images uses the
@@ -91,7 +91,7 @@ convenience scripts to build, push, and run the image.
 
 See: [[https://github.com/ralatsdc/nsforest-docker/blob/main/Dockerfile][ralatsdc/nsforest-docker/Dockerfile]]
 
-** Write Nextflow scripts
+*** Write Nextflow scripts
 
 Three Nextflow scripts are included in
 ~ralatsdc/springbok-ncbi-cell/ncbi-cell/nf~:

@@ -1,8 +1,8 @@
-*Chapter 03: Use of NS-Forest*
+* Chapter 03: Use of NS-Forest
 
 Ray LeClair <2024-07-07 Sun>
 
-* Objectives
+** Objectives
 
 Since use of NS-Forest for discovery of minimum marker gene
 combinations for cell type identification from single-cell RNA
@@ -11,23 +11,23 @@ pipeline, the objective of this document is to:
 
 - Run NS-Forest on an example human lung cell CELLxGENE dataset
 
-** Background
+*** Background
 
 The NS-Forest repository contains a tutorial that walks through all
 aspects of using NS-Forest.
 
 See: [[https://nsforest.readthedocs.io/en/latest/tutorial.html][NS-Forest Tutorial]]
 
-** Development environment
+*** Development environment
 
 See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
 
-*** Jupyter Notebook
+**** Jupyter Notebook
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-*** Emacs Org Mode
+**** Emacs Org Mode
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:
@@ -36,7 +36,7 @@ evaluate this code block to activate the virtual environment:
   (pyvenv-activate "../../.venv")
 #+end_src
 
-* Run NS-Forest on an example human lung cell CELLxGENE dataset
+** Run NS-Forest on an example human lung cell CELLxGENE dataset
 
 Following the tutorial, we write a function that runs NS-Forest on an
 example human lung cell CELLxGENE dataset. We assume the dataset has

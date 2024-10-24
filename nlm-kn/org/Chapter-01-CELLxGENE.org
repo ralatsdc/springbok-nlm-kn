@@ -1,4 +1,4 @@
-* Chapter 01: Use of CELLxGENE *
+* Chapter 01: Use of CELLxGENE
 
 Ray LeClair <2024-10-23 Wed>
 
@@ -362,7 +362,7 @@ file.
       try:
           summary = pd.merge(
               datasets, obs[obs_columns].drop_duplicates(), on="dataset_id"
-          )[sum_columns]
+          )[sum_columns].drop_duplicates()
       except Exception as exc:
           print_exception(exc)
 
