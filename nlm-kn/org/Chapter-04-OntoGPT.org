@@ -34,7 +34,7 @@ The following sections describe various development environments
 
 See:
 
-[[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][- SPIRES: Structured Prompt Interrogation and Recursive Extraction of Semantics]]
+- [[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][SPIRES: Structured Prompt Interrogation and Recursive Extraction of Semantics]]
 - [[https://monarch-initiative.github.io/ontogpt/functions/#pubmed-annotate][pubmed-annotate]]
 - [[https://monarch-initiative.github.io/ontogpt/cell_type/][Cell Type]]
 - [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
@@ -143,3 +143,4 @@ See:
 
 - [[file:Chapter-05-ArangoDB.ipynb][Chapter-05-ArangoDB.ipynb]]
 - [[file:Chapter-03-NS-Forest.ipynb][Chapter-03-NS-Forest.ipynb]]
+
