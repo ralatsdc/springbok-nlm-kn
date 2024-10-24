@@ -1,8 +1,8 @@
-*Chapter 02: Use of E-Utilities*
+* Chapter 02: Use of E-Utilities
 
 Ray LeClair <2024-07-06 Sat>
 
-* Objectives
+** Objectives
 
 Since the OntoGPT ~pubmed-annotate~ function requires a PubMed
 Identifier (PMID) as an argument, the objective of this document
@@ -13,22 +13,22 @@ See:
 - [[file:Chapter-04-OntoGPT.ipynb][Chapter-04-ontoGPT.ipynb]]
 - [[https://www.ncbi.nlm.nih.gov/books/NBK25499/][E-Utilities]]
 
-** Background
+*** Background
 
 The Entrez Programming Utilities (E-utilities) provide a stable API
 into the Entrez query and database system at the National Center for
 Biotechnology Information (NCBI).
 
-** Development environment
+The following sections describe various development environments
 
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
+See: [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-*** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-*** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:
@@ -37,7 +37,7 @@ evaluate this code block to activate the virtual environment:
   (pyvenv-activate "../../.venv")
 #+end_src
 
-* Identification of a title within PubMed
+** Identification of a title within PubMed
 
 To begin, we import modules, and assign module scope variables:
 
@@ -67,10 +67,10 @@ the titles of the corresponding publications earlier.
 See: [[file:Chapter-01-CELLxGENE.ipynb][Chapter-01-CELLxGENE.ipynb]]
 
 #+begin_src python :results output :session shared
-  from CELLxGENE import get_lung_obs_and_datasets, get_title
+  from CELLxGENE import get_metadata_and_datasets, get_title
   try:
-      lung_obs, lung_datasets = get_lung_obs_and_datasets()
-      citation = lung_datasets["citation"].iloc[4]
+      datasets, counts, var, obs = get_metadata_and_datasets()
+      citation = datasets["citation"].iloc[4]
       title = get_title(citation)
   except Exception:
       print_exc()

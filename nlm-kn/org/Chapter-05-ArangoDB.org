@@ -1,8 +1,8 @@
-*Chapter 05: Use of ArangoDB*
+* Chapter 05: Use of ArangoDB
 
 Ray LeClair <2024-07-14 Sun>
 
-* Objectives
+** Objectives
 
 Since the NCBI Information Resources Branch has extensive experience
 with ArangoDB, including performance comparison testing with Neo4j,
@@ -26,7 +26,7 @@ one database core, and provides a unified query language, AQL
 
 See: [[https://en.wikipedia.org/wiki/ArangoDB][ArangoDB]]
 
-** Background
+*** Background
 
 An instance of ArangoDB can be run using the official Docker
 image. For example, a instance with authentication disabled can be run
@@ -45,21 +45,20 @@ where ~ARANGODB_HOME~ has been set to the name of the directory in
 which to persist data. Now ~python-arango~ can be used to interact
 with the database system using Python.
 
+The following sections describe various development environments
+
 See:
 
 - [[https://hub.docker.com/_/arangodb][ArangoDB Docker image]]
 - [[https://docs.python-arango.com/en/main/#][python-arango]]
+- [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-** Development environment
-
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
-
-*** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-*** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:
@@ -68,7 +67,7 @@ evaluate this code block to activate the virtual environment:
   (pyvenv-activate "../../.venv")
 #+end_src
 
-* Create or get, and delete an ArangoDB database
+** Create or get, and delete an ArangoDB database
 
 To begin, we import modules, and assign module scope variables:
 
@@ -157,7 +156,7 @@ Now initialize a named database:
       print_exc()
 #+end_src
 
-* Create or get, and delete a database graph
+** Create or get, and delete a database graph
 
 For purposes of this demonstration, we assume we have run NS-Forest
 for a set of CELLxGENE datasets, as shown in Chapter 03, naively using
@@ -231,7 +230,7 @@ Note that we can delete the graph as follows:
           db.delete_graph(graph_name)
 #+end_src
 
-* Create or get, and delete a graph vertex collection
+** Create or get, and delete a graph vertex collection
 
 Following our earlier conventions, here's the function we need:
 
@@ -294,7 +293,7 @@ Note that we can delete a vertex collection as follows:
           graph.delete_vertex_collection(vertex_name)
 #+end_src
 
-* Create or get, and delete a graph edge definition and collection
+** Create or get, and delete a graph edge definition and collection
 
 ArangoDB can create edge collections by specifying an edge definition
 consisting of a from and to vertex collection. When using this
@@ -367,7 +366,7 @@ Note that we can delete an edge collection as follows:
           graph.delete_edge_definition(edge_name)
 #+end_src
 
-* Insert graph vertices and edges
+** Insert graph vertices and edges
 
 Assuming the NS-Forest results reside in directory ~NSFOREST_DIR~, we
 read each results file, then insert a vertex for each cell type and

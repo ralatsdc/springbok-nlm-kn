@@ -3,7 +3,9 @@ import os
 import re
 import subprocess
 from time import sleep
-from traceback import print_exc
+from traceback import print_exception
+
+import cellxgene_census
 
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -15,32 +17,48 @@ CELLXGENE_DOMAIN_NAME = "cellxgene.cziscience.com"
 CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
 CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
 
-NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
+NLM_KN_DIR = f"{DATA_DIR}/nlm-kn"
 
 HTTPS_SLEEP = 1
 
 
-def get_lung_obs_and_datasets():
-    """Use the CZ CELLxGENE Census to obtain all unprocessed human
-    lung cell metadata and datasets, then write the resulting Pandas
-    DataFrames to parquet files, or, if the files exist, read them.
+def get_metadata_and_datasets(
+    organisms=["homo_sapiens", "mus_musculus"], tissues=["lung", "eye", "brain"]
+):
+    """Use the CZ CELLxGENE Census to obtain all datasets, summary
+    cell counts, gene metadata, and, by default, human and mouse
+    lung, eye, and brain cell metadata, then write the resulting
+    Pandas DataFrames to parquet files, or, if the files exist, read
+    them.
 
     Parameters
     ----------
-    None
+    organisms : list(str)
+        List of organisms, default is ["homo_sapiens", "mus_musculus"]
+    tissues : list(str)
+        List of tissues, default is ["lung", "eye", "brain"]
 
     Returns
     -------
-    lung_obs : pd.DataFrame
-        DataFrame containing unprocessed dataset metadata
-    lung_datasets : pd.DataFrame
-        DataFrame containing unprocessed dataset descriptions
+    datasets : pd.DataFrame
+        DataFrame containing dataset descriptions
+    counts : pd.DataFrame
+        DataFrame containing summary cell counts
+    var : pd.DataFrame
+        DataFrame containing gene metadata
+    obs : pd.DataFrame
+        DataFrame containing cell metadata
     """
     # Create and write, or read DataFrames
-    lung_obs_parquet = f"{NCBI_CELL_DIR}/up_lung_obs.parquet"
-    lung_datasets_parquet = f"{NCBI_CELL_DIR}/up_lung_datasets.parquet"
-    if not os.path.exists(lung_obs_parquet) or not os.path.exists(
-        lung_datasets_parquet
+    datasets_parquet = f"{NLM_KN_DIR}/datasets.parquet"
+    counts_parquet = f"{NLM_KN_DIR}/counts.parquet"
+    var_parquet = f"{NLM_KN_DIR}/var.parquet"
+    obs_parquet = f"{NLM_KN_DIR}/obs.parquet"
+    if (
+        not os.path.exists(datasets_parquet)
+        or not os.path.exists(counts_parquet)
+        or not os.path.exists(var_parquet)
+        or not os.path.exists(obs_parquet)
     ):
         print("Opening soma")
         census = cellxgene_census.open_soma(census_version="latest")
@@ -48,37 +66,70 @@ def get_lung_obs_and_datasets():
         print("Collecting all datasets")
         datasets = census["census_info"]["datasets"].read().concat().to_pandas()
 
-        print("Collecting lung obs")
-        lung_obs = (
-            census["census_data"]["homo_sapiens"]
-            .obs.read(
-                value_filter="tissue_general == 'lung' and is_primary_data == True"
-            )
-            .concat()
-            .to_pandas()
+        print("Collecting summary cell counts")
+        counts = (
+            census["census_info"]["summary_cell_counts"].read().concat().to_pandas()
         )
+
+        var = pd.DataFrame()
+        for organism in organisms:
+            print(f"Collecting gene metadata for {organism}")
+            var = pd.concat(
+                [
+                    var,
+                    cellxgene_census.get_var(
+                        census,
+                        organism,
+                    ),
+                ]
+            )
+
+        obs = pd.DataFrame()
+        for organism in organisms:
+            print(f"Collecting cell metadata for {organism}: {tissues} tissue")
+            obs_for_org = cellxgene_census.get_obs(
+                census,
+                organism,
+                value_filter=f"tissue_general in {tissues} and is_primary_data == True",
+            )
+            obs_for_org["organism"] = organism
+            obs = pd.concat(
+                [
+                    obs,
+                    obs_for_org,
+                ]
+            )
 
         print("Closing soma")
         census.close()
 
-        print("Writing unprocessed lung obs parquet")
-        lung_obs.to_parquet(lung_obs_parquet)
+        print("Writing datasets parquet")
+        datasets.to_parquet(datasets_parquet)
 
-        print("Finding unprocessed lung datasets")
-        lung_datasets = datasets[datasets["dataset_id"].isin(lung_obs["dataset_id"])]
+        print("Writing summary cell counts parquet")
+        counts.to_parquet(counts_parquet)
 
-        print("Writing unprocessed lung datasets parquet")
-        lung_datasets.to_parquet(lung_datasets_parquet)
+        print("Writing gene metadata parquet")
+        var.to_parquet(var_parquet)
+
+        print("Writing cell metadata parquet")
+        obs.to_parquet(obs_parquet)
 
     else:
 
-        print("Reading unprocessed lung obs parquet")
-        lung_obs = pd.read_parquet(lung_obs_parquet)
+        print("Reading datasets parquet")
+        datasets = pd.read_parquet(datasets_parquet)
 
-        print("Reading unprocessed lung datasets parquet")
-        lung_datasets = pd.read_parquet(lung_datasets_parquet)
+        print("Reading summary cell counts parquet")
+        counts = pd.read_parquet(counts_parquet)
 
-    return lung_obs, lung_datasets
+        print("Reading gene metadata parquet")
+        var = pd.read_parquet(var_parquet)
+
+        print("Reading cell metadata parquet")
+        obs = pd.read_parquet(obs_parquet)
+
+    return datasets, counts, var, obs
 
 
 def get_title(citation):

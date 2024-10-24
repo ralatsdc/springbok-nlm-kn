@@ -1,20 +1,21 @@
-*Chapter 01: Use of CELLxGENE*
+* Chapter 01: Use of CELLxGENE
 
-Ray LeClair <2024-07-01 Mon>
+Ray LeClair <2024-10-23 Wed>
 
-* Objectives
+** Objectives
 
-Since CELLxGENE serves as an initiating data source for the NCBI Cell
-pilot, the objectives of this document include demonstration of:
+Since CELLxGENE serves as an initiating data source for the NLM
+Knowledge Network pilot, the objectives of this document include
+demonstration of:
 
-- Identification of CELLxGENE datasets for a particular organism, and
-  tissue
+- Identification of CELLxGENE datasets for specified organisms, and
+  tissues
 
 - Identification of publications corresponding to CELLxGENE datasets
 
-- Determination of the dataset filename and dataset file download.
+- Determination of the dataset filename and dataset file download
 
-** Background
+*** Background
 
 All single-cell RNA data from Chan Zuckerberg (CZ) CELLxGENE Discover
 is accessed, queried, and analyzed using the CELLxGENE Discover
@@ -37,16 +38,16 @@ Zuckerberg Initiative (CZI) repository, which demonstrate how to:
 
 - [[https://github.com/chanzuckerberg/single-cell-curation/blob/0c77179d2e794846861f8109c037b723507959cb/notebooks/curation_api/python_raw/get_dataset.ipynb][Fetch full metadata for a Dataset]]
 
-** Development environment
+The following sections describe various development environments
 
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
+See: [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-*** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-*** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:
@@ -55,14 +56,15 @@ evaluate this code block to activate the virtual environment:
   (pyvenv-activate "../../.venv")
 #+end_src
 
-* Identification of CELLxGENE datasets for human, lung cells
+** Identification of CELLxGENE datasets for specified organisms, and tissues
 
-Following the first tutorial, we write a function that obtains all
-human lung cell metadata and datasets from the CZ CELLxGENE Census as
-Pandas DataFrames. Anticipating a time consuming process, the first
-call of the function writes the DataFrames to ~.parquet~ files, then,
-on subsequent calls, it reads the ~.parquet~ files. In both cases, the
-resulting DataFrames are returned.
+Mostly following the first tutorial, we write a function that obtains
+all datasets, summary cell counts, gene metadata, and, by default,
+human and mouse lung, eye, and brain cell metadata from the CZ
+CELLxGENE Census as Pandas DataFrames. Anticipating a time consuming
+process, the first call of the function writes the DataFrames to
+~.parquet~ files, then, on subsequent calls, it reads the ~.parquet~
+files. In both cases, the resulting DataFrames are returned.
 
 To begin, we import modules, and assign module scope variables:
 
@@ -72,7 +74,9 @@ To begin, we import modules, and assign module scope variables:
   import re
   import subprocess
   from time import sleep
-  from traceback import print_exc
+  from traceback import print_exception
+
+  import cellxgene_census
 
   from bs4 import BeautifulSoup
   import pandas as pd
@@ -84,7 +88,7 @@ To begin, we import modules, and assign module scope variables:
   CELLXGENE_API_URL_BASE = f"https://api.{CELLXGENE_DOMAIN_NAME}"
   CELLXGENE_DIR = f"{DATA_DIR}/cellxgene"
 
-  NCBI_CELL_DIR = f"{DATA_DIR}/ncbi-cell"
+  NLM_KN_DIR = f"{DATA_DIR}/nlm-kn"
 
   HTTPS_SLEEP = 1
 #+end_src
@@ -92,27 +96,43 @@ To begin, we import modules, and assign module scope variables:
 Next we write the function:
 
 #+begin_src python :results silent :session shared :tangle ../py/CELLxGENE.py
-  def get_lung_obs_and_datasets():
-      """Use the CZ CELLxGENE Census to obtain all unprocessed human
-      lung cell metadata and datasets, then write the resulting Pandas
-      DataFrames to parquet files, or, if the files exist, read them.
+  def get_metadata_and_datasets(
+      organisms=["homo_sapiens", "mus_musculus"], tissues=["lung", "eye", "brain"]
+  ):
+      """Use the CZ CELLxGENE Census to obtain all datasets, summary
+      cell counts, gene metadata, and, by default, human and mouse
+      lung, eye, and brain cell metadata, then write the resulting
+      Pandas DataFrames to parquet files, or, if the files exist, read
+      them.
 
       Parameters
       ----------
-      None
+      organisms : list(str)
+          List of organisms, default is ["homo_sapiens", "mus_musculus"]
+      tissues : list(str)
+          List of tissues, default is ["lung", "eye", "brain"]
 
       Returns
       -------
-      lung_obs : pd.DataFrame
-          DataFrame containing unprocessed dataset metadata
-      lung_datasets : pd.DataFrame
-          DataFrame containing unprocessed dataset descriptions
+      datasets : pd.DataFrame
+          DataFrame containing dataset descriptions
+      counts : pd.DataFrame
+          DataFrame containing summary cell counts
+      var : pd.DataFrame
+          DataFrame containing gene metadata
+      obs : pd.DataFrame
+          DataFrame containing cell metadata
       """
       # Create and write, or read DataFrames
-      lung_obs_parquet = f"{NCBI_CELL_DIR}/up_lung_obs.parquet"
-      lung_datasets_parquet = f"{NCBI_CELL_DIR}/up_lung_datasets.parquet"
-      if not os.path.exists(lung_obs_parquet) or not os.path.exists(
-               lung_datasets_parquet
+      datasets_parquet = f"{NLM_KN_DIR}/datasets.parquet"
+      counts_parquet = f"{NLM_KN_DIR}/counts.parquet"
+      var_parquet = f"{NLM_KN_DIR}/var.parquet"
+      obs_parquet = f"{NLM_KN_DIR}/obs.parquet"
+      if (
+          not os.path.exists(datasets_parquet)
+          or not os.path.exists(counts_parquet)
+          or not os.path.exists(var_parquet)
+          or not os.path.exists(obs_parquet)
       ):
           print("Opening soma")
           census = cellxgene_census.open_soma(census_version="latest")
@@ -120,60 +140,150 @@ Next we write the function:
           print("Collecting all datasets")
           datasets = census["census_info"]["datasets"].read().concat().to_pandas()
 
-          print("Collecting lung obs")
-          lung_obs = (
-              census["census_data"]["homo_sapiens"]
-              .obs.read(
-                  value_filter="tissue_general == 'lung' and is_primary_data == True"
-              )
-              .concat()
-              .to_pandas()
+          print("Collecting summary cell counts")
+          counts = (
+              census["census_info"]["summary_cell_counts"].read().concat().to_pandas()
           )
+
+          var = pd.DataFrame()
+          for organism in organisms:
+              print(f"Collecting gene metadata for {organism}")
+              var = pd.concat(
+                  [
+                      var,
+                      cellxgene_census.get_var(
+                          census,
+                          organism,
+                      ),
+                  ]
+              )
+
+          obs = pd.DataFrame()
+          for organism in organisms:
+              print(f"Collecting cell metadata for {organism}: {tissues} tissue")
+              obs_for_org = cellxgene_census.get_obs(
+                  census,
+                  organism,
+                  value_filter=f"tissue_general in {tissues} and is_primary_data == True",
+              )
+              obs_for_org["organism"] = organism
+              obs = pd.concat(
+                  [
+                      obs,
+                      obs_for_org,
+                  ]
+              )
 
           print("Closing soma")
           census.close()
 
-          print("Writing unprocessed lung obs parquet")
-          lung_obs.to_parquet(lung_obs_parquet)
+          print("Writing datasets parquet")
+          datasets.to_parquet(datasets_parquet)
 
-          print("Finding unprocessed lung datasets")
-          lung_datasets = datasets[datasets["dataset_id"].isin(lung_obs["dataset_id"])]
+          print("Writing summary cell counts parquet")
+          counts.to_parquet(counts_parquet)
 
-          print("Writing unprocessed lung datasets parquet")
-          lung_datasets.to_parquet(lung_datasets_parquet)
+          print("Writing gene metadata parquet")
+          var.to_parquet(var_parquet)
+
+          print("Writing cell metadata parquet")
+          obs.to_parquet(obs_parquet)
 
       else:
 
-          print("Reading unprocessed lung obs parquet")
-          lung_obs = pd.read_parquet(lung_obs_parquet)
+          print("Reading datasets parquet")
+          datasets = pd.read_parquet(datasets_parquet)
 
-          print("Reading unprocessed lung datasets parquet")
-          lung_datasets = pd.read_parquet(lung_datasets_parquet)
+          print("Reading summary cell counts parquet")
+          counts = pd.read_parquet(counts_parquet)
 
-      return lung_obs, lung_datasets
+          print("Reading gene metadata parquet")
+          var = pd.read_parquet(var_parquet)
+
+          print("Reading cell metadata parquet")
+          obs = pd.read_parquet(obs_parquet)
+
+      return datasets, counts, var, obs
 #+end_src
 
-Then call it to obtain the human lung cell metadata and datasets
-(using exception handling since accessing an external resource), and
-print the result:
+Then call it to obtain the human and mouse lung, eye, and brain cell
+metadata and datasets (using exception handling since accessing an
+external resource), and print the result:
 
 #+begin_src python :results output :session shared
   try:
-      lung_obs, lung_datasets = get_lung_obs_and_datasets()
-  except Exception:
-      print_exc()
-  print(f"lung_obs:\n\ncolumns: {lung_obs.columns}\n\n{lung_obs}")
+      datasets, counts, var, obs = get_metadata_and_datasets()
+  except Exception as exc:
+      print_exception(exc)
+  print(f"datasets:\n\ncolumns: {datasets.columns}\n\n{datasets}")
   print()
-  print(f"lung_datasets:\n\ncolumns: {lung_datasets.columns}\n\n{lung_datasets}")
+  print(f"counts:\n\ncolumns: {counts.columns}\n\n{counts}")
+  print()
+  print(f"var:\n\ncolumns: {var.columns}\n\n{var}")
+  print()
+  print(f"obs:\n\ncolumns: {obs.columns}\n\n{obs}")
 #+end_src
 
-* Identification of publications corresponding to CELLxGENE datasets
+We can merge some of the resulting DataFrames to create a summary
+DataFrame for export. As before, we will write the summary DataFrame
+to a ~.parquet~ file, so that later we can simply read the ~.parquet~
+file.
+
+#+begin_src python :results output :session shared
+  summary_parquet = f"{NLM_KN_DIR}/summary.parquet"
+  if not os.path.exists(summary_parquet):
+      # Define columns needed from obs
+      obs_columns = [
+          "organism",
+          "tissue_general",
+          "tissue_general_ontology_term_id",
+          "assay",
+          "assay_ontology_term_id",
+          "dataset_id",
+      ]
+
+      # Define columns required for summary
+      sum_columns = [
+          "organism",
+          "tissue_general",
+          "tissue_general_ontology_term_id",
+          "collection_id",
+          "collection_name",
+          "collection_doi",
+          "assay",
+          "assay_ontology_term_id",
+          "dataset_id",
+          "dataset_title",
+          "dataset_h5ad_path",
+      ]
+
+      print("Merging datasets and obs DataFrames")
+      try:
+          summary = pd.merge(
+              datasets, obs[obs_columns].drop_duplicates(), on="dataset_id"
+          )[sum_columns].drop_duplicates()
+      except Exception as exc:
+          print_exception(exc)
+
+      print("Writing summary parquet")
+      summary.to_parquet(summary_parquet)
+
+      print("Writing summary CSV")
+      summary_csv = f"{NLM_KN_DIR}/summary.csv"
+      summary.to_csv(summary_csv)
+
+  else:
+      print("Reading summary parquet")
+      summary = pd.read_parquet(summary_parquet)
+#+end_src
+
+** Identification of publications corresponding to CELLxGENE datasets
 
 We notice that the datasets DataFrame contains a ~citation~ column,
 for example:
 
 #+begin_src python :results output :session shared
-  print(lung_datasets["citation"].iloc[4])
+  print(datasets["citation"].iloc[4])
 #+end_src
 
 The ~citation~ provides the DOI, but not the title of the
@@ -184,7 +294,7 @@ columns:
 See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
 
 #+begin_src python :results output :session shared
-  print(lung_datasets[["collection_name", "dataset_title"]].iloc[4, :])
+  print(datasets[["collection_name", "dataset_title"]].iloc[4, :])
 #+end_src
 
 But it appears we still need to find the title by some method. So, we
@@ -283,10 +393,10 @@ exception handling since accessing an external resource):
 
 #+begin_src python :results output :session shared
   try:
-      citation = lung_datasets["citation"].iloc[4]
+      citation = datasets["citation"].iloc[4]
       title = get_title(citation)
-  except Exception:
-      print_exc()
+  except Exception as exc:
+      print_exception(exc)
 #+end_src
 
 Note that the function attempts to use ~requests~, and if it fails,
@@ -294,7 +404,7 @@ Note that the function attempts to use ~requests~, and if it fails,
 selectors were discovered by manually inspecting the pages returned
 for the human lung cell datasets using Google Chrome Developer Tools.
 
-* Determine the dataset filename and download the dataset file.
+** Determine the dataset filename and download the dataset file.
 
 Following a notebook found in a CZI repository, we write a function to
 find the dataset filename, and to download the dataset file, given a
@@ -359,16 +469,16 @@ row of the datasets DataFrame obtained above:
       return dataset_filename
 #+end_src
 
-Then call it using the first row of the human lung cell datasets
-DataFrame obtained above, and print the result (we'll use exception
-handling when accessing an external resource from now on):
+Then call it using the first row of the datasets DataFrame obtained
+above, and print the result (we'll use exception handling when
+accessing an external resource from now on):
 
 #+begin_src python :results output :session shared
   try:
-      dataset_series = lung_datasets.iloc[4]
+      dataset_series = datasets.iloc[4]
       get_and_download_dataset_h5ad_file(dataset_series)
-  except Exception:
-      print_exc()
+  except Exception as exc:
+      print_exception(exc)
 #+end_src
 
 Next, in Chapter 02 we write functions to search PubMed for the title

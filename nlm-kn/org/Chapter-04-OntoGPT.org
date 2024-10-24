@@ -1,8 +1,8 @@
-*Chapter 04: Use of OntoGPT*
+* Chapter 04: Use of OntoGPT
 
 Ray LeClair <2024-07-08 Mon>
 
-* Objectives
+** Objectives
 
 Since the NCBI Cell pipeline calls for the use of a Large Language
 Model (LLM) to process publications associated with CELLxGENE
@@ -15,7 +15,7 @@ text using LLMs, instruction prompts, and ontology-based grounding.
 
 See: [[https://monarch-initiative.github.io/ontogpt/][OntoGPT]]
 
-** Background
+*** Background
 
 The primary extraction method currently implemented in OntoGPT is
 SPIRES: Structured Prompt Interrogation and Recursive Extraction of
@@ -30,21 +30,21 @@ This demonstration use the ~pubmed-annotate~ function to retrieve full
 text of a publicaiton given a PubMed identifier (PMID), then performs
 extraction on the text with SPIRES using the "Cell Type" template.
 
-[[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][- SPIRES: Structured Prompt Interrogation and Recursive Extraction of Semantics]]
+The following sections describe various development environments
 
+See:
+
+- [[https://academic.oup.com/bioinformatics/article/40/3/btae104/7612230][SPIRES: Structured Prompt Interrogation and Recursive Extraction of Semantics]]
 - [[https://monarch-initiative.github.io/ontogpt/functions/#pubmed-annotate][pubmed-annotate]]
 - [[https://monarch-initiative.github.io/ontogpt/cell_type/][Cell Type]]
+- [[https://github.com/ralatsdc/springbok-nlm-kn/blob/main/README.md][springbok-nlm-kn/README.md]]
 
-** Development environment
-
-See: [[https://github.com/ralatsdc/springbok-ncbi-cell/blob/main/README.md][springbok-ncbi-cell/README.md]]
-
-*** Jupyter Notebook
+*** Jupyter Notebook development environment
 
 Launch Jupyter Notebook from a terminal in which ~.zshenv~ has been
 sourced, and the virtual environment has been activated.
 
-*** Emacs Org Mode
+*** Emacs Org Mode development environment
 
 Launch Emacs from a terminal in which ~.zshenv~ has been sourced, then
 evaluate this code block to activate the virtual environment:
@@ -53,7 +53,7 @@ evaluate this code block to activate the virtual environment:
   (pyvenv-activate "../../.venv")
 #+end_src
 
-* Investigate the use of OntoGPT for publication processing
+** Investigate the use of OntoGPT for publication processing
 
 To begin, we import modules, and assign module scope variables:
 
@@ -71,11 +71,11 @@ Then recall that in [[file:Chapter-02-E-Utilities.org][Chapter-02-E-Utilities.or
 PMID for a title:
 
 #+begin_src python :results output :session shared
-  from CELLxGENE import get_lung_obs_and_datasets, get_title
+  from CELLxGENE import get_metadata_and_datasets, get_title
   from E_Utilities import get_pmid_for_title
   try:
-      lung_obs, lung_datasets = get_lung_obs_and_datasets()
-      citation = lung_datasets["citation"].iloc[4]
+      datasets, counts, var, obs = get_metadata_and_datasets()
+      citation = datasets["citation"].iloc[4]
       title = get_title(citation)
       pmid = get_pmid_for_title(title)
   except Exception:
