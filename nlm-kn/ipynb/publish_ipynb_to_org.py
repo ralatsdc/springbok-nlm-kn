@@ -169,7 +169,7 @@ def main():
     None
     """
     ipynb_home = Path(__file__).parent.resolve()
-    for ipynb_path in ipynb_home.glob("*.ipynb"):
+    for ipynb_path in ipynb_home.glob("Chapter-*.ipynb"):
         publish_ipynb_to_org(ipynb_path)
 
 
