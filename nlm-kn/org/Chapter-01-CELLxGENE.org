@@ -224,109 +224,8 @@ external resource), and print the result:
   print(f"obs:\n\ncolumns: {obs.columns}\n\n{obs}")
 #+end_src
 
-#+RESULTS:
-#+begin_example
-Reading datasets parquet
-Reading summary cell counts parquet
-Reading gene metadata parquet
-Reading cell metadata parquet
-datasets:
-
-columns: Index(['soma_joinid', 'citation', 'collection_id', 'collection_name',
-       'collection_doi', 'collection_doi_label', 'dataset_id',
-       'dataset_version_id', 'dataset_title', 'dataset_h5ad_path',
-       'dataset_total_cell_count'],
-      dtype='object')
-
-     soma_joinid  ... dataset_total_cell_count
-0              0  ...                      565
-1              1  ...                      146
-2              2  ...                      363
-3              3  ...                     3799
-4              4  ...                     1324
-..           ...  ...                      ...
-951          951  ...                  3177310
-952          952  ...                  3267338
-953          953  ...                 11441407
-954          954  ...                  1226855
-955          955  ...                  1309414
-
-[956 rows x 11 columns]
-
-counts:
-
-columns: Index(['soma_joinid', 'organism', 'category', 'label', 'ontology_term_id',
-       'total_cell_count', 'unique_cell_count'],
-      dtype='object')
-
-      soma_joinid      organism        category            label ontology_term_id  total_cell_count  unique_cell_count
-0               0  Homo sapiens             all               na               na          86410648           51835017
-1               1  Homo sapiens           assay         Drop-seq      EFO:0008722            338069             292631
-2               2  Homo sapiens           assay           inDrop      EFO:0008780             51304              25652
-3               3  Homo sapiens           assay         MARS-seq      EFO:0008796             70146              70146
-4               4  Homo sapiens           assay         Seq-Well      EFO:0008919            255232             137955
-...           ...           ...             ...              ...              ...               ...                ...
-1896         1896  Mus musculus  tissue_general   exocrine gland   UBERON:0002365             46731              15577
-1897         1897  Mus musculus  tissue_general   prostate gland   UBERON:0002367            130135              37715
-1898         1898  Mus musculus  tissue_general  endocrine gland   UBERON:0002368             39966              13322
-1899         1899  Mus musculus  tissue_general      bone marrow   UBERON:0002371            199699              90225
-1900         1900  Mus musculus  tissue_general        optic cup   UBERON:0003072               146                146
-
-[1901 rows x 7 columns]
-
-var:
-
-columns: Index(['soma_joinid', 'feature_id', 'feature_name', 'feature_length', 'nnz',
-       'n_measured_obs'],
-      dtype='object')
-
-       soma_joinid          feature_id       feature_name  feature_length       nnz  n_measured_obs
-0                0     ENSG00000237491          LINC01409            1059   7266057        75339772
-1                1     ENSG00000188976              NOC2L            1244  15080647        86077006
-2                2     ENSG00000187642              PERM1            2765    537346        75481456
-3                3     ENSG00000272512  ENSG00000272512.1            2086    805209        76397515
-4                4     ENSG00000188290               HES4             961  15402916        85816634
-...            ...                 ...                ...             ...       ...             ...
-52432        52432  ENSMUSG00002076766            Snord33              84       612           73347
-52433        52433  ENSMUSG00000118601            Gm53042             814        10          301796
-52434        52434  ENSMUSG00000118631            Gm53019            1593         5          301796
-52435        52435  ENSMUSG00000118645            Gm55062             480         0               0
-52436        52436  ENSMUSG00000118652            Gm54771             358         1          301796
-
-[113875 rows x 6 columns]
-
-obs:
-
-columns: Index(['soma_joinid', 'dataset_id', 'assay', 'assay_ontology_term_id',
-       'cell_type', 'cell_type_ontology_term_id', 'development_stage',
-       'development_stage_ontology_term_id', 'disease',
-       'disease_ontology_term_id', 'donor_id', 'is_primary_data',
-       'observation_joinid', 'self_reported_ethnicity',
-       'self_reported_ethnicity_ontology_term_id', 'sex',
-       'sex_ontology_term_id', 'suspension_type', 'tissue',
-       'tissue_ontology_term_id', 'tissue_type', 'tissue_general',
-       'tissue_general_ontology_term_id', 'raw_sum', 'nnz', 'raw_mean_nnz',
-       'raw_variance_nnz', 'n_measured_vars', 'organism'],
-      dtype='object')
-
-         soma_joinid                            dataset_id      assay  ... raw_variance_nnz n_measured_vars      organism
-0              69389  2f6a20f1-173d-4b8d-860b-c47ffea120fa  10x 3' v2  ...       122.226277           19884  homo_sapiens
-1              69390  2f6a20f1-173d-4b8d-860b-c47ffea120fa  10x 3' v2  ...        76.797450           19884  homo_sapiens
-2              69391  2f6a20f1-173d-4b8d-860b-c47ffea120fa  10x 3' v2  ...        73.692622           19884  homo_sapiens
-3              69392  2f6a20f1-173d-4b8d-860b-c47ffea120fa  10x 3' v2  ...        72.729032           19884  homo_sapiens
-4              69393  2f6a20f1-173d-4b8d-860b-c47ffea120fa  10x 3' v2  ...       127.932705           19884  homo_sapiens
-...              ...                                   ...        ...  ...              ...             ...           ...
-3859649     12264935  d7291f04-fbbb-4d65-990a-f01fa44e915b  10x 3' v2  ...        40.448180           28102  mus_musculus
-3859650     12264936  d7291f04-fbbb-4d65-990a-f01fa44e915b  10x 3' v2  ...        78.175412           28102  mus_musculus
-3859651     12264937  d7291f04-fbbb-4d65-990a-f01fa44e915b  10x 3' v2  ...         8.890497           28102  mus_musculus
-3859652     12264938  d7291f04-fbbb-4d65-990a-f01fa44e915b  10x 3' v2  ...        28.916028           28102  mus_musculus
-3859653     12264939  d7291f04-fbbb-4d65-990a-f01fa44e915b  10x 3' v2  ...        88.272342           28102  mus_musculus
-
-[28721975 rows x 29 columns]
-#+end_example
-
 We can merge some of the resulting DataFrames to create a summary
-DataFrame for export.  As before, we will write the summary DataFrame
+DataFrame for export. As before, we will write the summary DataFrame
 to a ~.parquet~ file, so that later we can simply read the ~.parquet~
 file.
 
@@ -378,11 +277,6 @@ file.
       summary = pd.read_parquet(summary_parquet)
 #+end_src
 
-#+RESULTS:
-: Merging datasets and obs DataFrames
-: Writing summary parquet
-: Writing summary CSV
-
 ** Identification of publications corresponding to CELLxGENE datasets
 
 We notice that the datasets DataFrame contains a ~citation~ column,
@@ -391,9 +285,6 @@ for example:
 #+begin_src python :results output :session shared
   print(datasets["citation"].iloc[4])
 #+end_src
-
-#+RESULTS:
-: Publication: https://doi.org/10.1038/s41586-019-0903-2 Dataset Version: https://datasets.cellxgene.cziscience.com/701a5b3f-d30f-49d9-97ce-c89523875b81.h5ad curated and distributed by CZ CELLxGENE Discover in Collection: https://cellxgene.cziscience.com/collections/16c1e722-96ae-4bf6-b408-cd7f8918484f
 
 The ~citation~ provides the DOI, but not the title of the
 publication. Note that we will need the title later in Chapter 02:
@@ -405,11 +296,6 @@ See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
 #+begin_src python :results output :session shared
   print(datasets[["collection_name", "dataset_title"]].iloc[4, :])
 #+end_src
-
-#+RESULTS:
-: collection_name    Single nuclei RNA- sequencing from the white m...
-: dataset_title                                 Oligodendrocytes in MS
-: Name: 88, dtype: object
 
 But it appears we still need to find the title by some method. So, we
 write a function that requests the DOI, then parses the resulting
@@ -513,11 +399,6 @@ exception handling since accessing an external resource):
       print_exception(exc)
 #+end_src
 
-#+RESULTS:
-: Getting title for citation URL: https://doi.org/10.1038/s41586-019-0903-2
-: Trying requests
-: Found title: 'Altered human oligodendrocyte heterogeneity in multiple sclerosis' for citation URL: https://doi.org/10.1038/s41586-019-0903-2
-
 Note that the function attempts to use ~requests~, and if it fails,
 ~wget~, since some publishers respond to one, but not the other. The
 selectors were discovered by manually inspecting the pages returned
@@ -600,11 +481,8 @@ accessing an external resource from now on):
       print_exception(exc)
 #+end_src
 
-#+RESULTS:
-: Downloading dataset file: ../data/cellxgene/dc30c3ec-46d6-4cd8-8ec1-b544a3d0f503.H5AD
-: Dataset file: ../data/cellxgene/dc30c3ec-46d6-4cd8-8ec1-b544a3d0f503.H5AD downloaded
-
 Next, in Chapter 02 we write functions to search PubMed for the title
 and identifiers.
 
 See: [[file:Chapter-02-E-Utilities.ipynb][Chapter-02-E-Utilities.ipynb]]
+
