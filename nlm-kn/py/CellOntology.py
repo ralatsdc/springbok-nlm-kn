@@ -853,6 +853,8 @@ def update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):
 
 def main():
 
+    # TODO: Add argument parsing.
+
     bioportal_dirname = "../data/bioportal"
     cl_filename = "cl.owl"
 
