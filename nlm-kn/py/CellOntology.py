@@ -15,7 +15,7 @@ VALID_VERTICES = ["UBERON", "CL", "GO", "NCBITaxon", "PR", "PATO", "CHEBI"]
 
 
 def parse_ols(ols_dir, ols_fnm):
-    """(1)Parse ontology XML downloaded from the Ontology Lookup Service
+    """Parse ontology XML downloaded from the Ontology Lookup Service
     to create a mapping from term to label, from label to term, and a
     list of ontology identifiers.
 
@@ -55,8 +55,10 @@ def parse_ols(ols_dir, ols_fnm):
 
     for about_element_type in about_element_types:
 
+        # Consider each element of the current type
         for about_element in root.iter(f"{owl}{about_element_type}"):
 
+            # Look for an about attribute
             uriref = about_element.get(f"{rdf}about")
             if uriref is None:
                 continue
@@ -65,6 +67,7 @@ def parse_ols(ols_dir, ols_fnm):
             if id is None:
                 continue
 
+            # Look for a label element
             label_element = about_element.find(f"{rdfs}label")
             if label_element is None:
                 continue
@@ -81,14 +84,14 @@ def parse_ols(ols_dir, ols_fnm):
 
 
 def parse_term(term, ro=None):
-    """(2)Parse an rdflib term first as an URIRef that identifies a
+    """Parse an rdflib term first as an URIRef that identifies a
     class, including relationship classes, then a predicate, BNode, or
     Literal.
 
     Parameters
     ----------
-    term : rdflib.term.* | str
-        An rdflib term: BNode, Literal, or URIRef or equivalent string
+    term : rdflib.term.BNode|Literal|URIRef | str
+        An rdflib term: BNode, Literal, or URIRef, or equivalent string
     ro : None | dict
         A dictionary mapping relationship ontology terms to labels
 
@@ -97,15 +100,15 @@ def parse_term(term, ro=None):
     tuple
         Contains ontology identifier, number, and term, label or
         literal value, and type ('class', 'predicate', or 'literal'),
-        in which any element may also be None
+        in which any element of the tuple may also be None
     """
+    # Parse then match as URL
     path = urlparse(term).path
     fragment = urlparse(term).fragment
-
     match = URIREF_PATTERN.match(path)
-
     if match is not None:
 
+        # Matched as URL
         oid = match.group(1)
         if oid == "GOREL":
             # Identifier not found in the Ontology Lookup Service
@@ -127,22 +130,30 @@ def parse_term(term, ro=None):
             return oid, number, term, None, "class"
 
     elif fragment != "":
+
+        # Parsed as URL with a fragment, so assume fragment is a
+        # predicate
         return None, None, None, fragment, "predicate"
 
     elif isinstance(term, BNode):
-        # Create pseudo ontology identifier, number, and term
+
+        # Create pseudo ontology identifier, number, and term for a
+        # BNode
         oid = "BNode"
         number = Path(path).stem
         term = f"{oid}_{number}"
         return oid, number, term, None, "class"
 
     else:
+
+        # Parsed as URL without a fragment, so assume stem is a
+        # literal
         return None, None, None, Path(path).stem, "literal"
 
 
 def count_triple_types(rdf_graph):
-    """(3)Count rdflib triple types, triples containing BNode,
-    Literal, and URIRef.
+    """Count rdflib triple types, triples containing BNode, Literal,
+    and URIRef.
 
     Parameters
     ----------
@@ -152,7 +163,8 @@ def count_triple_types(rdf_graph):
     Returns
     -------
     triple_types : dict
-        Dictionary of counts by triple type
+        Dictionary of counts by triple type (a tuple of subject,
+        predicate, and object type)
     """
     triple_types = {}
 
@@ -169,8 +181,8 @@ def count_triple_types(rdf_graph):
 
 
 def collect_fnode_triples(rdf_graph):
-    """(4)Collect filled node triples, that is, triples in which
-    neither the subject nor object is a BNode, from an rdflib graph.
+    """Collect filled node triples, that is, triples in which neither
+    the subject nor object is a BNode, from an rdflib graph.
 
     Parameters
     ----------
@@ -195,9 +207,9 @@ def collect_fnode_triples(rdf_graph):
 
 
 def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ro=None):
-    """(5)Collect sets of triples each sharing a common BNode. Sets
-    contain triples relating to a relation between classes, an
-    annotation of a class, or a yet to be understood
+    """Collect sets of triples each sharing a common BNode. Sets
+    appear to contain triples relating to a relation between classes,
+    an annotation of a class, or a yet to be understood
     purpose. Predicate fragments, then subject or object type, are
     used to identify set type.
 
@@ -207,9 +219,9 @@ def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ro=None):
         Graph parsed by rdflib
     triple_sets : dict
         Dictionary containing sets of triples each sharing a common
-        BNode. Sets contain triples relating to a relation between
-        classes, an annotation of a class, or a yet to be understood
-        purpose
+        BNode. Sets appear to contain triples relating to a relation
+        between classes, an annotation of a class, or a yet to be
+        understood purpose
     use : str
         Part of triple to use as key in the dictionary ('subject', or
         'object')
@@ -237,6 +249,8 @@ def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ro=None):
         if not isinstance(n, BNode):
             continue
 
+        # Specified node is a BNode, so add it to the dict, and append
+        # the triple to the appropriate set
         if n not in triple_sets:
             triple_sets[n] = {}
             triple_sets[n]["relation"] = []
@@ -268,24 +282,24 @@ def collect_bnode_triple_sets(rdf_graph, triple_sets, use="subject", ro=None):
 
 
 def create_bnode_triples_from_bnode_triple_sets(triple_sets, ro=None):
-    """(6)Create 'relation' and 'annotation' triples from BNode triple
-    sets, collecting all ignored triple.
+    """Create 'relation' and 'annotation' triples from BNode triple
+    sets, collecting all ignored triples.
 
     Parameters
     ----------
     triple_sets : dict
         Dictionary containing sets of triples each sharing a common
-        BNode. Sets contain triples relating to a relation between
-        classes, an annotation of a class, or a yet to be understood
-        purpose
+        BNode. Sets appear to contain triples relating to a relation
+        between classes, an annotation of a class, or a yet to be
+        understood purpose
     ro : None | dict
         A dictionary mapping relationship ontology terms to labels
 
     Returns
     -------
     bnode_triples : list(tuple)
-        List of tuples which contain all 'relation' and 'annotation'
-        triples
+        List of tuples which contain all created 'relation' and
+        'annotation' triples
     ignored_triples : list(tuple)
         List of tuples which contain all ignored triples
     None
@@ -316,7 +330,7 @@ def create_bnode_triples_from_bnode_triple_sets(triple_sets, ro=None):
 
 
 def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ro=None):
-    """(7)Create tiples from a triple set by identifying, based on set
+    """Create triples from a triple set by identifying, based on set
     type, the triple in the set that defines the subject, predicate,
     and object.
 
@@ -324,9 +338,9 @@ def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ro=None):
     ----------
     triple_sets : dict
         Dictionary containing sets of triples each sharing a common
-        BNode. Sets contain triples relating to a relation between
-        classes, an annotation of a class, or a yet to be understood
-        purpose
+        BNode. Sets appear to contain triples relating to a relation
+        between classes, an annotation of a class, or a yet to be
+        understood purpose
     set_type : str
         Set type, ('relation' or 'annotation')
     ro : None | dict
@@ -342,8 +356,8 @@ def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ro=None):
     bnode_triples = []
     ignored_triples = []
 
-    # Define the fragments which identify the triple which defines the
-    # subject, predicate, and object by set type
+    # Define the fragments which identify the triple, and define the
+    # subject, predicate, and object, by set type
     if set_type == "relation":
         s_p_fragment = "subClassOf"
         p_p_fragment = "onProperty"
@@ -412,17 +426,20 @@ def create_bnode_triples_from_bnode_triple_set(triple_set, set_type, ro=None):
 
 
 def get_fnode(s, o):
-    """(8)Get the filled node of a subject and predicate pair, if one
-    of which is a BNode.
+    """Get the filled node of a subject and predicate pair, if one
+    member of the pair is a BNode.
 
     Parameters
     ----------
     s : rdflib.term.BNode|URIRef
+        Subject of triple
     o : rdflib.term.BNode|Literal|URIRef
+        Object of triple
 
     Returns
     -------
     reflib.term.Literal|URIRef
+        The term which is not a BNode
     """
     if isinstance(s, BNode) and isinstance(o, BNode):
         raise Exception("Both s and o are blank")
@@ -439,13 +456,35 @@ def get_fnode(s, o):
 
 def load_triples_into_adb_graph(
     triples, adb_graph, vertex_collections, edge_collections, ro=None
-):  # (9) <class 'arango.graph.Graph'>
+):
+    """Uses each triple to add vertices, and edges to a graph,
+    additionally adding annotation to vertices.
 
+    Parameters
+    ----------
+    triples : list(tuples)
+        List of tuples which contain each triple
+    adb_graph : arango.graph.Graph
+        An ArangoDB graph instance
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
+    ro : None | dict
+        A dictionary mapping relationship ontology terms to labels
+
+    Returns
+    -------
+    None
+    """
     for s, p, o in triples:
 
         create_or_get_vertices_from_triple(
             adb_graph, vertex_collections, s, p, o, ro=ro
         )
+
         create_or_get_edge_from_triple(
             adb_graph, vertex_collections, edge_collections, s, p, o, ro=ro
         )
@@ -455,68 +494,17 @@ def load_triples_into_adb_graph(
         update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=ro)
 
 
-def create_or_get_vertex(
-    adb_graph, vertex_collections, vertex_name, vertex_key, vertex_term
-):
-    """(10)Create, or get the identified vertex, creating vertex
-    collections as needed.
+def create_or_get_vertices_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):
+    """Create, or get vertices defined by the subject and object of
+    the triple, creating vertex collections as needed.
 
     Parameters
     ----------
     adb_graph : arango.graph.Graph
         An ArangoDB graph instance
     vertex_collections : dict
-        A dictionary with vertex name keys containing ArangoDB vertex
-        collection instance values
-    vertex_name : str
-        The vertex collection name
-    vertex_key : str
-        The vertex key
-    vertex_term : str
-        The vertex ontology term
-
-    Returns
-    -------
-    vertex : dict
-        The ArangoDB vertex document
-    """
-    if vertex_name not in VALID_VERTICES:
-        print(f"Skipping invalid vertex name: {vertex_name}")
-        return
-
-    vertex = {}
-
-    if vertex_name not in vertex_collections:
-        vertex_collections[vertex_name] = adb.create_or_get_vertex_collection(
-            adb_graph, vertex_name
-        )
-
-    if not vertex_collections[vertex_name].has(vertex_key):
-        vertex = {
-            "_key": vertex_key,
-            "term": vertex_term,
-        }
-        vertex_collections[vertex_name].insert(vertex)
-
-    else:
-        vertex = vertex_collections[vertex_name].get(vertex_key)
-
-    return vertex
-
-
-def create_or_get_vertices_from_triple(
-    adb_graph, vertex_collections, s, p, o, ro=None
-):
-    """(11)Create, or get vertices for the subject and object of the
-    triple, creating vertex collections as needed.
-
-    Parameters
-    ----------
-    adb_graph : arango.graph.Graph
-        An ArangoDB graph instance
-    vertex_collections : dict
-        A dictionary with vertex name keys containing ArangoDB vertex
-        collection instance values
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
     s : rdflib.term.BNode|URIRef
         Subject of triple
     p : rdflib.term.URIRef
@@ -559,9 +547,85 @@ def create_or_get_vertices_from_triple(
     return vertices
 
 
+def create_or_get_vertex(
+    adb_graph, vertex_collections, vertex_name, vertex_key, vertex_term
+):
+    """Create, or get the identified vertex, creating vertex
+    collections as needed.
+
+    Parameters
+    ----------
+    adb_graph : arango.graph.Graph
+        An ArangoDB graph instance
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    vertex_name : str
+        The vertex collection name
+    vertex_key : str
+        The vertex key
+    vertex_term : str
+        The vertex ontology term
+
+    Returns
+    -------
+    vertex : dict
+        The ArangoDB vertex document
+    """
+    if vertex_name not in VALID_VERTICES:
+        print(f"Skipping invalid vertex name: {vertex_name}")
+        return
+
+    vertex = {}
+
+    if vertex_name not in vertex_collections:
+        vertex_collections[vertex_name] = adb.create_or_get_vertex_collection(
+            adb_graph, vertex_name
+        )
+
+    if not vertex_collections[vertex_name].has(vertex_key):
+        vertex = {
+            "_key": vertex_key,
+            "term": vertex_term,
+        }
+        vertex_collections[vertex_name].insert(vertex)
+
+    else:
+        vertex = vertex_collections[vertex_name].get(vertex_key)
+
+    return vertex
+
+
 def create_or_get_edge_from_triple(
     adb_graph, vertex_collections, edge_collections, s, p, o, ro=None
-):  # (12)
+):
+    """Create, or get edge defined by the subject, predicate, and
+    object of the triple, creating edge collections as needed.
+
+    Parameters
+    ----------
+    adb_graph : arango.graph.Graph
+        An ArangoDB graph instance
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
+    s : rdflib.term.BNode|URIRef
+        Subject of triple
+    p : rdflib.term.URIRef
+        Predicate of triple
+    o : rdflib.term.BNode|Literal|URIRef
+        Object of triple
+    ro : None | dict
+        A dictionary mapping relationship ontology terms to labels
+
+    Returns
+    -------
+    edge : dict
+        The ArangoDB edge document
+    """
 
     if isinstance(o, Literal):
         # print(f"Skipping literal object in triple: {(s, p, o)}")
@@ -625,8 +689,40 @@ def create_or_get_edge(
     to_vertex_key,
     to_vertex_term,
     predicate,
-):  # (13) <class 'arango.collection.EdgeCollection'>
+):  #
+    """Create, or get the identified edge, creating edge collections
+    as needed.
 
+    Parameters
+    ----------
+    adb_graph : arango.graph.Graph
+        An ArangoDB graph instance
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
+    from_vertex_name : str
+        The from vertex collection name
+    from_vertex_key : str
+        The from vertex key
+    from_vertex_term : str
+        The from vertex ontology term
+    to_vertex_name : str
+        The to vertex collection name
+    to_vertex_key : str
+        The to vertex key
+    to_vertex_term : str
+        The to vertex ontology term
+    predicate : str
+        The predicate with which to label the edge
+
+    Returns
+    -------
+    edge : dict
+        The ArangoDB edge document
+    """
     from_vertex = create_or_get_vertex(
         adb_graph,
         vertex_collections,
@@ -672,7 +768,32 @@ def create_or_get_edge(
     return edge
 
 
-def update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):  # (14)
+def update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):
+    """Update vertex with annotation defined by the subject,
+    predicate, and object of a triple, creating edge collections as
+    needed.
+
+    Parameters
+    ----------
+    adb_graph : arango.graph.Graph
+        An ArangoDB graph instance
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    s : rdflib.term.BNode|URIRef
+        Subject of triple
+    p : rdflib.term.URIRef
+        Predicate of triple
+    o : rdflib.term.BNode|Literal|URIRef
+        Object of triple
+    ro : None | dict
+        A dictionary mapping relationship ontology terms to labels
+
+    Returns
+    -------
+    vertex : dict
+        The updated ArangoDB vertex document
+    """
 
     if not isinstance(o, Literal):
         # print(f"Skipping non-literal object in triple: {(s, p, o)}")
@@ -708,11 +829,14 @@ def update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=None): 
     predicate = p_fragment
 
     if isinstance(o.value, datetime):
+        # Convert datetime objects created by rdflib to strings
         value = str(o.value)
 
     else:
         value = o.value
 
+    # Use the predicate as the key, and the object as the value in the
+    # vertex document
     if not predicate in vertex:
         vertex[predicate] = value
 
@@ -729,99 +853,78 @@ def update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=None): 
 
 def main():
 
-    ols_dirname = (
-        "/Users/raymondleclair/Projects/NLM/NLM-KN/springbok-nlm-kn/nlm-kn/data/ols"
+    bioportal_dirname = "../data/bioportal"
+    cl_filename = "cl.owl"
+
+    ols_dirname = "../data/ols"
+    ro_filename = "ro.owl"
+
+    db_name = "BioPortal-Full"
+    graph_name = "CL-Full"
+
+    log_filename = f"{graph_name}.log"
+
+    print(f"Parsing {Path(bioportal_dirname) / cl_filename} to populate rdflib graph")
+    rdf_graph = Graph()
+    rdf_graph.parse(Path(bioportal_dirname) / cl_filename)
+
+    print(f"Parsing {Path(bioportal_dirname) / cl_filename} to identify ids")
+    _, _, ids = parse_ols(bioportal_dirname, cl_filename)
+    print(ids)
+
+    print("Counting triple types in rdflib graph")
+    triple_types = count_triple_types(rdf_graph)
+    pprint(triple_types)
+
+    print("Printing all triples in rdflib graph")
+    triples = []
+    triples_filename = log_filename.replace(".log", "_triples.txt")
+    with open(triples_filename, "w") as fp:
+        for triple in rdf_graph:
+            triples.append(triple)
+            fp.write(str(triple) + "\n")
+
+    print("Collecting and printing all filled node triples in rdflib graph")
+    fnode_triples = collect_fnode_triples(rdf_graph)
+    fnode_triples_filename = log_filename.replace(".log", "_fnode_triples.txt")
+    with open(fnode_triples_filename, "w") as fp:
+        for fnode_triple in fnode_triples:
+            fp.write(str(fnode_triple) + "\n")
+
+    print("Collecting and printing all blank node triple sets in rdflib graph")
+    bnode_triple_sets = {}
+    ro, _, _ = parse_ols(ols_dirname, ro_filename)
+    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
+    collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
+    bnode_triple_sets_filename = log_filename.replace(".log", "_bnode_triple_sets.txt")
+    with open(bnode_triple_sets_filename, "w") as fp:
+        pprint(bnode_triple_sets, fp)
+
+    print("Creating and printing all blank node triples in rdflib graph")
+    bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
+        bnode_triple_sets, ro=ro
     )
+    bnode_triples_filename = log_filename.replace(".log", "_bnode_triples.txt")
+    with open(bnode_triples_filename, "w") as fp:
+        for bnode_triple in bnode_triples:
+            fp.write(str(bnode_triple) + "\n")
 
-    bioportal_dirname = "/Users/raymondleclair/Projects/NLM/NLM-KN/springbok-nlm-kn/nlm-kn/data/bioportal"
-
-    ontologies = [
-        {
-            "cl_filename": "general_cell_types_upper_slim.owl",
-            "db_name": "BioPortal-BNode",
-            "graph_name": "CL-BNode",
-        },
-        {
-            "cl_filename": "general_cell_types_upper_slim.owl",
-            "db_name": "BioPortal-Slim",
-            "graph_name": "CL-Slim",
-        },
-        # {"cl_filename": "cl.owl", "db_name": "BioPortal-Full", "graph_name": "CL-Full"},
-    ]
-
-    for ontology in ontologies:
-
-        cl_filename = ontology["cl_filename"]
-        db_name = ontology["db_name"]
-        graph_name = ontology["graph_name"]
-
-        log_filename = f"{graph_name}.log"
-
-        ro_filename = "ro.owl"
-        ro, _ = parse_ols(ols_dirname, ro_filename)
-
-        _, ids = parse_ols(bioportal_dirname, cl_filename)
-        print(ids)
-
-        rdf_graph = Graph()
-        rdf_graph.parse(Path(bioportal_dirname) / cl_filename)
-
-        triples = []
-        triples_filename = log_filename.replace(".log", "_triples.txt")
-        with open(triples_filename, "w") as fp:
-            for triple in rdf_graph:
-                triples.append(triple)
-                fp.write(str(triple) + "\n")
-
-        triple_types = count_triple_types(rdf_graph)
-        pprint(triple_types)
-
-        fnode_triples = collect_fnode_triples(rdf_graph)
-
-        fnode_triples_filename = log_filename.replace(".log", "_fnode_triples.txt")
-        with open(fnode_triples_filename, "w") as fp:
-            for fnode_triple in fnode_triples:
-                fp.write(str(fnode_triple) + "\n")
-
-        bnode_triple_sets = {}
-
-        collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
-        collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
-
-        bnode_triple_sets_filename = log_filename.replace(
-            ".log", "_bnode_triple_sets.txt"
-        )
-        with open(bnode_triple_sets_filename, "w") as fp:
-            pprint(bnode_triple_sets, fp)
-
-        bnode_triples, ignored_triples = create_bnode_triples_from_bnode_triple_sets(
-            bnode_triple_sets, ro=ro
-        )
-
-        bnode_triples_filename = log_filename.replace(".log", "_bnode_triples.txt")
-        with open(bnode_triples_filename, "w") as fp:
-            for bnode_triple in bnode_triples:
-                fp.write(str(bnode_triple) + "\n")
-
-        fnode_triples.extend(bnode_triples)
-
-        adb.delete_database(db_name)
-        db = adb.create_or_get_database(db_name)
-
-        adb.delete_graph(db, graph_name)
-        adb_graph = adb.create_or_get_graph(db, graph_name)
-
-        vertex_collections = {}
-        edge_collections = {}
-
-        if db_name == "BioPortal-BNode":
-            VALID_VERTICES.extend(["BNode", "RO"])
-            triples_to_populate = triples
-        else:
-            triples_to_populate = fnode_triples
-        load_triples_into_adb_graph(
-            triples_to_populate, adb_graph, vertex_collections, edge_collections, ro=ro
-        )
+    print("Creating ArangoDB database and graph, and loading triples")
+    adb.delete_database(db_name)
+    db = adb.create_or_get_database(db_name)
+    adb.delete_graph(db, graph_name)
+    adb_graph = adb.create_or_get_graph(db, graph_name)
+    if db_name == "BioPortal-BNode":
+        VALID_VERTICES.extend(["BNode", "RO"])
+        triples_to_populate = triples
+    else:
+        triples_to_populate = fnode_triples.copy()
+        triples_to_populate.extend(bnode_triples)
+    vertex_collections = {}
+    edge_collections = {}
+    load_triples_into_adb_graph(
+        triples_to_populate, adb_graph, vertex_collections, edge_collections, ro=ro
+    )
 
 
 if __name__ == "__main__":
