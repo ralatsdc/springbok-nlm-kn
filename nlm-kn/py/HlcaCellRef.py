@@ -8,6 +8,8 @@ import pandas as pd
 
 
 alphabet = string.ascii_lowercase + string.digits
+
+
 def get_uuid():
     return "".join(random.choices(alphabet, k=8))
 
@@ -64,7 +66,7 @@ vertex_collections["anatomic_structure"].insert({"_key": _key, "name": "lung"})
 anatomic_structure_vertex = vertex_collections["anatomic_structure"].get(_key)
 
 
-# Publications vertices
+# Publication vertices
 _key = "HLCA_2023_Sikkema"
 vertex_collections["publication"].insert(
     {
@@ -154,32 +156,33 @@ for _, row in data.iterrows():
         cell_set_cellref_vertex = vertex_collections["cell_set"].get(_key)
 
     # Cell type vertices
-    cell_type_hlca_vertex = {}
-    if not pd.isna(row["Cell_type_HLCA"]):
-        _key = "hlca-" + row["uuid"]
-        vertex_collections["cell_type"].insert(
-            {
-                "_key": _key,
-                "name": row["Cell_type_HLCA"],
-            }
-        )
-        cell_type_hlca_vertex = vertex_collections["cell_type"].get(_key)
-    cell_type_cellref_vertex = {}
-    if not pd.isna(row["Cell_type_cellref"]):
-        _key = "cellref-" + row["uuid"]
-        vertex_collections["cell_type"].insert(
-            {
-                "_key": _key,
-                "name": row["Cell_type_cellref"],
-            }
-        )
-        cell_type_cellref_vertex = vertex_collections["cell_type"].get(_key)
-    cell_type_cl_vertex = {}
+    # TODO: Decide whether we need these cell types, or not
+    # cell_type_hlca_vertex = {}
+    # if not pd.isna(row["Cell_type_HLCA"]):
+    #     _key = "hlca-" + row["uuid"]
+    #     vertex_collections["cell_type"].insert(
+    #         {
+    #             "_key": _key,
+    #             "name": row["Cell_type_HLCA"],
+    #         }
+    #     )
+    #     cell_type_hlca_vertex = vertex_collections["cell_type"].get(_key)
+    # cell_type_cellref_vertex = {}
+    # if not pd.isna(row["Cell_type_cellref"]):
+    #     _key = "cellref-" + row["uuid"]
+    #     vertex_collections["cell_type"].insert(
+    #         {
+    #             "_key": _key,
+    #             "name": row["Cell_type_cellref"],
+    #         }
+    #     )
+    #     cell_type_cellref_vertex = vertex_collections["cell_type"].get(_key)
+    # cell_type_cl_vertex = {}
     if not (
         pd.isna(row["CL_cell_type"])
         or pd.isna(row["CL_PURL"])
-        or pd.isna(row["Current CL definition"])
-        or pd.isna(row["Proposed addition to CL definition or annotation property."])
+        # or pd.isna(row["Current CL definition"])
+        # or pd.isna(row["Proposed addition to CL definition or annotation property."])
     ):
         _key = "cl-" + row["uuid"]
         vertex_collections["cell_type"].insert(
@@ -187,10 +190,10 @@ for _, row in data.iterrows():
                 "_key": _key,
                 "name": row["CL_cell_type"],
                 "purl": row["CL_PURL"],
-                "current definition": row["Current CL definition"],
-                "proposed definition": row[
-                    "Proposed addition to CL definition or annotation property."
-                ],
+                "current definition": str(row["Current CL definition"]),
+                "proposed definition": str(
+                    row["Proposed addition to CL definition or annotation property."]
+                ),
             }
         )
         cell_type_cl_vertex = vertex_collections["cell_type"].get(_key)
@@ -211,10 +214,14 @@ for _, row in data.iterrows():
     triples = []
     triples.extend(
         [
-            (biomarker_combination_hlca_vertex, "IS_MARKER_FOR", cell_set_hlca_vertex),
+            (
+                biomarker_combination_hlca_vertex,
+                {"name": "IS_MARKER_FOR", "Fbeta": row["HLCA_Fbeta"]},
+                cell_set_hlca_vertex,
+            ),
             (
                 biomarker_combination_cellref_vertex,
-                "IS_MARKER_FOR",
+                {"name": "IS_MARKER_FOR", "Fbeta": row["CellRef_Fbeta"]},
                 cell_set_cellref_vertex,
             ),
         ]
@@ -223,50 +230,72 @@ for _, row in data.iterrows():
     # Cell type PART_OF anatomic structure triples
     triples.extend(
         [
-            (cell_type_hlca_vertex, "PART_OF", anatomic_structure_vertex),
-            (cell_type_cellref_vertex, "PART_OF", anatomic_structure_vertex),
+            # (cell_type_hlca_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
+            # (cell_type_cellref_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
+            (cell_type_cl_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
         ]
     )
 
     # Cell set IS_INSTANCE cell type triples
-    triples.extend(
-        [
-            (cell_set_hlca_vertex, "IS_INSTANCE", cell_type_hlca_vertex),
-            (cell_set_hlca_vertex, "IS_INSTANCE", cell_type_cl_vertex),
-            (cell_set_cellref_vertex, "IS_INSTANCE", cell_type_cellref_vertex),
-            (cell_set_cellref_vertex, "IS_INSTANCE", cell_type_cl_vertex),
-        ]
-    )
+    if row["predicate_HLCA"] == "skos:exactMatch":
+        triples.extend(
+            [
+                # (cell_set_hlca_vertex, {"name": "IS_INSTANCE"}, cell_type_hlca_vertex),
+                (
+                    cell_set_hlca_vertex,
+                    {"name": "IS_INSTANCE"},
+                    cell_type_cl_vertex,
+                ),
+                # (cell_set_cellref_vertex, {"name": "IS_INSTANCE"}, cell_type_cellref_vertex),
+                (
+                    cell_set_cellref_vertex,
+                    {"name": "IS_INSTANCE"},
+                    cell_type_cl_vertex,
+                ),
+            ]
+        )
 
     # Cell set EXPRESSES gene triples
     for gene in hlca_genes:
-        gene_vertex = vertex_collections["gene"].get(gene)
-        triples.append((cell_set_hlca_vertex, "EXPRESSES", gene_vertex))
+        _key = gene
+        gene_vertex = vertex_collections["gene"].get(_key)
+        triples.append((cell_set_hlca_vertex, {"name": "EXPRESSES"}, gene_vertex))
     for gene in cellref_genes:
-        gene_vertex = vertex_collections["gene"].get(gene)
-        triples.append((cell_set_cellref_vertex, "EXPRESSES", gene_vertex))
+        _key = gene
+        gene_vertex = vertex_collections["gene"].get(_key)
+        triples.append((cell_set_cellref_vertex, {"name": "EXPRESSES"}, gene_vertex))
 
     # Cell set SOURCE publication triples
     triples.extend(
         [
-            (cell_set_hlca_vertex, "SOURCE", publication_hlca_vertex),
-            (cell_set_cellref_vertex, "SOURCE", publication_cellref_vertex),
+            (cell_set_hlca_vertex, {"name": "SOURCE"}, publication_hlca_vertex),
+            (cell_set_cellref_vertex, {"name": "SOURCE"}, publication_cellref_vertex),
         ]
     )
 
     # Gene PART_OF biomarker combination triples
     for gene in hlca_genes:
-        gene_vertex = vertex_collections["gene"].get(gene)
-        triples.append((gene_vertex, "PART_OF", biomarker_combination_hlca_vertex))
+        _key = gene
+        gene_vertex = vertex_collections["gene"].get(_key)
+        triples.append(
+            (gene_vertex, {"name": "PART_OF"}, biomarker_combination_hlca_vertex)
+        )
     for gene in cellref_genes:
-        gene_vertex = vertex_collections["gene"].get(gene)
-        triples.append((gene_vertex, "PART_OF", biomarker_combination_cellref_vertex))
+        _key = gene
+        gene_vertex = vertex_collections["gene"].get(_key)
+        triples.append(
+            (
+                gene_vertex,
+                {"name": "PART_OF"},
+                biomarker_combination_cellref_vertex,
+            )
+        )
 
     for triple in triples:
 
-        from_vertex = triple[0]
+        from_vertex = triple[0]  # subject
         predicate = triple[1]
-        to_vertex = triple[2]
+        to_vertex = triple[2]  # object
 
         if from_vertex == {} or to_vertex == {}:
             continue
@@ -275,8 +304,8 @@ for _, row in data.iterrows():
             "_key": from_vertex["_key"] + "-" + to_vertex["_key"],
             "_from": from_vertex["_id"],
             "_to": to_vertex["_id"],
-            "name": predicate,
         }
+        edge.update(predicate)
 
         from_vertex_collection = from_vertex["_id"].split("/")[0]
         to_vertex_collection = to_vertex["_id"].split("/")[0]
