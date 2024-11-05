@@ -6,6 +6,8 @@ import string
 import ArangoDB as adb
 import pandas as pd
 
+from CellOntology import parse_term
+
 
 alphabet = string.ascii_lowercase + string.digits
 
@@ -22,7 +24,11 @@ data["uuid"] = [get_uuid() for idx in data.index]
 
 db_name = "hlca_cellref"
 graph_name = "hlca_cellref"
-adb.delete_database(db_name)
+
+db_name = "BioPortal-Slim"
+graph_name = "CL-Slim"
+
+# adb.delete_database(db_name)
 db = adb.create_or_get_database(db_name)
 adb_graph = adb.create_or_get_graph(db, graph_name)
 
@@ -32,7 +38,7 @@ vertex_names = [
     "anatomic_structure",
     "biomarker_combination",
     "cell_set",
-    "cell_type",
+    "CL",
     "gene",
     "publication",
 ]
@@ -44,11 +50,11 @@ for vertex_name in vertex_names:
 edge_collections = {}
 vertex_name_pairs = [
     ("biomarker_combination", "cell_set"),
-    ("cell_type", "anatomic_structure"),
-    ("cell_set", "cell_type"),
+    ("CL", "anatomic_structure"),
+    ("cell_set", "CL"),
     ("cell_set", "gene"),
     ("cell_set", "publication"),
-    ("cell_type", "cell_type"),
+    ("CL", "CL"),
     ("gene", "biomarker_combination"),
 ]
 for vertex_name_pair in vertex_name_pairs:
@@ -62,26 +68,29 @@ for vertex_name_pair in vertex_name_pairs:
 
 # Anatomic structures vertex
 _key = "Organ_12345"
-vertex_collections["anatomic_structure"].insert({"_key": _key, "name": "lung"})
+if not vertex_collections["anatomic_structure"].has(_key):
+    vertex_collections["anatomic_structure"].insert({"_key": _key, "name": "lung"})
 anatomic_structure_vertex = vertex_collections["anatomic_structure"].get(_key)
 
 
 # Publication vertices
 _key = "HLCA_2023_Sikkema"
-vertex_collections["publication"].insert(
-    {
-        "_key": _key,
-        "name": "HLCA_2023_Sikkema_doi.org/10.1038/s41591-023-02327-2",
-    }
-)
+if not vertex_collections["publication"].has(_key):
+    vertex_collections["publication"].insert(
+        {
+            "_key": _key,
+            "name": "HLCA_2023_Sikkema_doi.org/10.1038/s41591-023-02327-2",
+        }
+    )
 publication_hlca_vertex = vertex_collections["publication"].get(_key)
 _key = "cellRef_2023_Guo"
-vertex_collections["publication"].insert(
-    {
-        "_key": _key,
-        "name": "cellRef_2023_Guo_doi.org/10.1038/s41467-023-40173-5",
-    }
-)
+if not vertex_collections["publication"].has(_key):
+    vertex_collections["publication"].insert(
+        {
+            "_key": _key,
+            "name": "cellRef_2023_Guo_doi.org/10.1038/s41467-023-40173-5",
+        }
+    )
 publication_cellref_vertex = vertex_collections["publication"].get(_key)
 
 
@@ -98,12 +107,13 @@ for _, row in data.iterrows():
         hlca_genes = ast.literal_eval(row["HLCA_NSForestMarkers"])
         cellref_genes = hlca_genes
         _key = "hlca-cellref-" + row["uuid"]
-        vertex_collections["biomarker_combination"].insert(
-            {
-                "_key": _key,
-                "name": hlca_genes,
-            }
-        )
+        if not vertex_collections["biomarker_combination"].get(_key):
+            vertex_collections["biomarker_combination"].insert(
+                {
+                    "_key": _key,
+                    "name": hlca_genes,
+                }
+            )
         biomarker_combination_hlca_vertex = vertex_collections[
             "biomarker_combination"
         ].get(_key)
@@ -113,9 +123,10 @@ for _, row in data.iterrows():
         if not pd.isna(row["HLCA_NSForestMarkers"]):
             hlca_genes = ast.literal_eval(row["HLCA_NSForestMarkers"])
             _key = "hlca-" + row["uuid"]
-            vertex_collections["biomarker_combination"].insert(
-                {"_key": _key, "name": hlca_genes}
-            )
+            if not vertex_collections["biomarker_combination"].has(_key):
+                vertex_collections["biomarker_combination"].insert(
+                    {"_key": _key, "name": hlca_genes}
+                )
             biomarker_combination_hlca_vertex = vertex_collections[
                 "biomarker_combination"
             ].get(_key)
@@ -123,12 +134,13 @@ for _, row in data.iterrows():
         if not pd.isna(row["CellRef_NSForestMarkers"]):
             cellref_genes = ast.literal_eval(row["CellRef_NSForestMarkers"])
             _key = "cellref-" + row["uuid"]
-            vertex_collections["biomarker_combination"].insert(
-                {
-                    "_key": _key,
-                    "name": cellref_genes,
-                }
-            )
+            if not vertex_collections["biomarker_combination"].has(_key):
+                vertex_collections["biomarker_combination"].insert(
+                    {
+                        "_key": _key,
+                        "name": cellref_genes,
+                    }
+                )
             biomarker_combination_cellref_vertex = vertex_collections[
                 "biomarker_combination"
             ].get(_key)
@@ -137,22 +149,24 @@ for _, row in data.iterrows():
     cell_set_hlca_vertex = {}
     if not pd.isna(row["HLCA_cellset"]):
         _key = "hlca-" + row["uuid"]
-        vertex_collections["cell_set"].insert(
-            {
-                "_key": _key,
-                "name": row["HLCA_cellset"],
-            }
-        )
+        if not vertex_collections["cell_set"].has(_key):
+            vertex_collections["cell_set"].insert(
+                {
+                    "_key": _key,
+                    "name": row["HLCA_cellset"],
+                }
+            )
         cell_set_hlca_vertex = vertex_collections["cell_set"].get(_key)
     cell_set_cellref_vertex = {}
     if not pd.isna(row["cellref_cellset"]):
         _key = "cellref-" + row["uuid"]
-        vertex_collections["cell_set"].insert(
-            {
-                "_key": _key,
-                "name": row["cellref_cellset"],
-            }
-        )
+        if not vertex_collections["cell_set"].has(_key):
+            vertex_collections["cell_set"].insert(
+                {
+                    "_key": _key,
+                    "name": row["cellref_cellset"],
+                }
+            )
         cell_set_cellref_vertex = vertex_collections["cell_set"].get(_key)
 
     # Cell type vertices
@@ -160,23 +174,25 @@ for _, row in data.iterrows():
     # cell_type_hlca_vertex = {}
     # if not pd.isna(row["Cell_type_HLCA"]):
     #     _key = "hlca-" + row["uuid"]
-    #     vertex_collections["cell_type"].insert(
-    #         {
-    #             "_key": _key,
-    #             "name": row["Cell_type_HLCA"],
-    #         }
-    #     )
-    #     cell_type_hlca_vertex = vertex_collections["cell_type"].get(_key)
+    #     if not vertex_collections["CL"].has(_key):
+    #         vertex_collections["CL"].insert(
+    #             {
+    #                 "_key": _key,
+    #                 "name": row["Cell_type_HLCA"],
+    #             }
+    #         )
+    #     cell_type_hlca_vertex = vertex_collections["CL"].get(_key)
     # cell_type_cellref_vertex = {}
     # if not pd.isna(row["Cell_type_cellref"]):
     #     _key = "cellref-" + row["uuid"]
-    #     vertex_collections["cell_type"].insert(
-    #         {
-    #             "_key": _key,
-    #             "name": row["Cell_type_cellref"],
-    #         }
-    #     )
-    #     cell_type_cellref_vertex = vertex_collections["cell_type"].get(_key)
+    #     if not vertex_collections["CL"].has(_key):
+    #         vertex_collections["CL"].insert(
+    #             {
+    #                 "_key": _key,
+    #                 "name": row["Cell_type_cellref"],
+    #             }
+    #         )
+    #     cell_type_cellref_vertex = vertex_collections["CL"].get(_key)
     # cell_type_cl_vertex = {}
     if not (
         pd.isna(row["CL_cell_type"])
@@ -184,19 +200,33 @@ for _, row in data.iterrows():
         # or pd.isna(row["Current CL definition"])
         # or pd.isna(row["Proposed addition to CL definition or annotation property."])
     ):
-        _key = "cl-" + row["uuid"]
-        vertex_collections["cell_type"].insert(
-            {
-                "_key": _key,
-                "name": row["CL_cell_type"],
-                "purl": row["CL_PURL"],
-                "current definition": str(row["Current CL definition"]),
-                "proposed definition": str(
-                    row["Proposed addition to CL definition or annotation property."]
-                ),
-            }
-        )
-        cell_type_cl_vertex = vertex_collections["cell_type"].get(_key)
+        if "http" in row["CL_PURL"]:
+            _, number, _, _, _ = parse_term(row["CL_PURL"])
+
+        elif ":" in row["CL_PURL"]:
+            number = row["CL_PURL"].split(":")[1]
+        _key = number
+        cell_type_cl_vertex = vertex_collections["CL"].get(_key)
+        if cell_type_cl_vertex:
+            cell_type_cl_vertex["proposed definition"] = str(
+                row["Proposed addition to CL definition or annotation property."]
+            )
+            vertex_collections["CL"].update(cell_type_cl_vertex)
+        else:
+            cell_type_cl_vertex = {}
+        # if not vertex_collections["CL"].has(_key):
+        #     vertex_collections["CL"].insert(
+        #         {
+        #             "_key": _key,
+        #             "name": row["CL_cell_type"],
+        #             "purl": row["CL_PURL"],
+        #             "current definition": str(row["Current CL definition"]),
+        #             "proposed definition": str(
+        #                 row["Proposed addition to CL definition or annotation property."]
+        #             ),
+        #         }
+        #     )
+        # cell_type_cl_vertex = vertex_collections["CL"].get(_key)
 
     # Gene vertices
     for gene in hlca_genes + cellref_genes:
