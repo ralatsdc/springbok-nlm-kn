@@ -267,19 +267,19 @@ for _, row in data.iterrows():
     )
 
     # Cell set IS_INSTANCE cell type triples
-    if row["predicate_HLCA"] == "skos:exactMatch":
+    if row["predicate_HLCA"] == "skos:exactMatch" or row["predicate_HLCA"] == "skos:relatedMatch":
         triples.extend(
             [
                 # (cell_set_hlca_vertex, {"name": "IS_INSTANCE"}, cell_type_hlca_vertex),
                 (
                     cell_set_hlca_vertex,
-                    {"name": "IS_INSTANCE"},
+                    {"name": "IS_INSTANCE", "match": row["predicate_HLCA"]},
                     cell_type_cl_vertex,
                 ),
                 # (cell_set_cellref_vertex, {"name": "IS_INSTANCE"}, cell_type_cellref_vertex),
                 (
                     cell_set_cellref_vertex,
-                    {"name": "IS_INSTANCE"},
+                    {"name": "IS_INSTANCE", "match": row["predicate_HLCA"]},
                     cell_type_cl_vertex,
                 ),
             ]
