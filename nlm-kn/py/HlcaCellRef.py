@@ -14,23 +14,77 @@ ALPHABET = string.ascii_lowercase + string.digits
 
 
 def get_uuid():
+    """Get an eight character random string.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    An eight character random string.
+    """
     return "".join(random.choices(ALPHABET, k=8))
 
 
-def load_data(data_dir, data_fnm):
-    data = pd.read_excel(data_dir / data_fnm, header=1, skiprows=0)
+def load_data(data_dirname, data_filename):
+    """Load manually curated data.
+
+    Parameters
+    ----------
+    data_dirname : str
+        Name of directory containing manually curated data
+    data_filename : str
+        Name of Excel file containing manually curated data
+
+    Returns
+    -------
+    data : pd.DataFrame
+        DataFrame containing manually curated data
+    """
+    data = pd.read_excel(data_dirname / data_filename, header=1, skiprows=0)
     data["uuid"] = [get_uuid() for idx in data.index]
     return data
 
 
 def get_graph(db_name, graph_name):
+    """Get an graph from an ArangoDB database.
+
+    Parameters
+    ----------
+    db_name : str
+        Name of ArangoDB database
+    graph_name : str
+        Name of ArangoDB database graph
+
+    Returns
+    -------
+    adb_graph : arango.graph.Graph
+        ArangoDB database graph
+    """
     db = adb.create_or_get_database(db_name)
     adb_graph = adb.create_or_get_graph(db, graph_name)
     return adb_graph
 
 
 def init_collections(adb_graph):
+    """Define and create vertex and edge collections.
 
+    Parameters
+    ----------
+    adb_graph : arango.graph.Graph
+        ArangoDB database graph
+
+    Returns
+    -------
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
+    """
+    # Define and create vertex collections
     vertex_collections = {}
     vertex_names = [
         "anatomic_structure",
@@ -44,6 +98,7 @@ def init_collections(adb_graph):
         collection = adb.create_or_get_vertex_collection(adb_graph, vertex_name)
         vertex_collections[vertex_name] = collection
 
+    # Define and create edge collections
     edge_collections = {}
     vertex_name_pairs = [
         ("biomarker_combination", "cell_set"),
@@ -65,9 +120,25 @@ def init_collections(adb_graph):
     return vertex_collections, edge_collections
 
 
-def add_vertices(vertex_collections):
+def insert_vertices(vertex_collections):
+    """Add the anatomic structure and publication vertices.
 
-    # Anatomic structures vertex
+    Parameters
+    ----------
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+
+    Returns
+    -------
+    anatomic_structure_vertex : dict
+        The ArangoDB anatomic structure vertex document
+    publication_hlca_vertex : dict
+        The ArangoDB HLCA publication vertex document
+    publication_cellref_vertex,
+        The ArangoDB CellRef publication vertex document
+    """
+    # Anatomic structure vertex
     _key = "Organ_12345"
     if not vertex_collections["anatomic_structure"].has(_key):
         vertex_collections["anatomic_structure"].insert({"_key": _key, "name": "lung"})
@@ -100,13 +171,24 @@ def add_vertices(vertex_collections):
     )
 
 
-def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
+def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
+    """Add vertices and edges from the given row of the DataFrame containing manually curated data.
 
+    Parameters
+    ----------
+    row : pd.Series
+        Row Series from the DataFrame containing manually curated data
+
+    Returns
+    -------
+    None
+    """
+    # Add the anatomic structure and publication vertices
     anatomic_structure_vertex, publication_hlca_vertex, publication_cellref_vertex = (
-        add_vertices(vertex_collections)
+        insert_vertices(vertex_collections)
     )
 
-    # Biomarker combination vertices
+    # Add biomarker combination vertices
     hlca_genes = []
     biomarker_combination_hlca_vertex = {}
     cellref_genes = []
@@ -155,7 +237,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
                 "biomarker_combination"
             ].get(_key)
 
-    # Cell set vertices
+    # Add cell set vertices
     cell_set_hlca_vertex = {}
     if not pd.isna(row["HLCA_cellset"]):
         _key = "hlca-" + row["uuid"]
@@ -179,7 +261,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
             )
         cell_set_cellref_vertex = vertex_collections["cell_set"].get(_key)
 
-    # Cell type vertices
+    # Add cell type vertices
     # TODO: Decide whether we need these cell types, or not
     # cell_type_hlca_vertex = {}
     # if not pd.isna(row["Cell_type_HLCA"]):
@@ -207,14 +289,18 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
     if not (
         pd.isna(row["CL_cell_type"])
         or pd.isna(row["CL_PURL"])
+        # TODO: Decide if we need to test if these definitions are present
         # or pd.isna(row["Current CL definition"])
         # or pd.isna(row["Proposed addition to CL definition or annotation property."])
     ):
+        # Get the number from the current CL term
         if "http" in row["CL_PURL"]:
             _, number, _, _, _ = parse_term(row["CL_PURL"])
 
         elif ":" in row["CL_PURL"]:
             number = row["CL_PURL"].split(":")[1]
+
+        # Update the CL term vertex, if it exists
         _key = number
         cell_type_cl_vertex = vertex_collections["CL"].get(_key)
         if cell_type_cl_vertex:
@@ -224,6 +310,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
             vertex_collections["CL"].update(cell_type_cl_vertex)
         else:
             cell_type_cl_vertex = {}
+        # TODO: Remove
         # if not vertex_collections["CL"].has(_key):
         #     vertex_collections["CL"].insert(
         #         {
@@ -238,7 +325,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
         #     )
         # cell_type_cl_vertex = vertex_collections["CL"].get(_key)
 
-    # Gene vertices
+    # Add gene vertices
     for gene in hlca_genes + cellref_genes:
         _key = gene
         if not vertex_collections["gene"].has(_key):
@@ -250,8 +337,10 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
             )
             gene_vertex = vertex_collections["gene"].get(_key)
 
-    # Biomarker combination IS_MARKER_FOR cell set triples
+    # Initialize triples
     triples = []
+
+    # Define and collect (biomarker combination, IS_MARKER_FOR, cell set) triples
     triples.extend(
         [
             (
@@ -267,7 +356,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
         ]
     )
 
-    # Cell type PART_OF anatomic structure triples
+    # Define and collect (cell type, PART_OF, anatomic structure) triples
     triples.extend(
         [
             # (cell_type_hlca_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
@@ -276,7 +365,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
         ]
     )
 
-    # Cell set IS_INSTANCE cell type triples
+    # Define and collect (cell set, IS_INSTANCE, cell type) triples
     if (
         row["predicate_HLCA"] == "skos:exactMatch"
         or row["predicate_HLCA"] == "skos:relatedMatch"
@@ -298,7 +387,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
             ]
         )
 
-    # Cell set EXPRESSES gene triples
+    # Define and collect (cell set, EXPRESSES, gene) triples
     for gene in hlca_genes:
         _key = gene
         gene_vertex = vertex_collections["gene"].get(_key)
@@ -308,7 +397,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
         gene_vertex = vertex_collections["gene"].get(_key)
         triples.append((cell_set_cellref_vertex, {"name": "EXPRESSES"}, gene_vertex))
 
-    # Cell set SOURCE publication triples
+    # Define and collect (cell set, SOURCE, publication) triples
     triples.extend(
         [
             (cell_set_hlca_vertex, {"name": "SOURCE"}, publication_hlca_vertex),
@@ -316,7 +405,7 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
         ]
     )
 
-    # Gene PART_OF biomarker combination triples
+    # Define and collect (gene, PART_OF, biomarker combination) triples
     for gene in hlca_genes:
         _key = gene
         gene_vertex = vertex_collections["gene"].get(_key)
@@ -334,15 +423,18 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
             )
         )
 
+    # Insert all triples
     for triple in triples:
 
         from_vertex = triple[0]  # subject
         predicate = triple[1]
         to_vertex = triple[2]  # object
 
+        # All vertices are valid or an empty dictionary
         if from_vertex == {} or to_vertex == {}:
             continue
 
+        # Define edge, noting that all predicates are arbitrary dictionaries
         edge = {
             "_key": from_vertex["_key"] + "-" + to_vertex["_key"],
             "_from": from_vertex["_id"],
@@ -350,10 +442,10 @@ def add_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
         }
         edge.update(predicate)
 
+        # Insert triple
         from_vertex_collection = from_vertex["_id"].split("/")[0]
         to_vertex_collection = to_vertex["_id"].split("/")[0]
         edge_name = from_vertex_collection + "-" + to_vertex_collection
-
         if not edge_collections[edge_name].has(edge):
             edge_collections[edge_name].insert(edge)
 
@@ -401,12 +493,15 @@ def main():
         db_name += "-BNodes"
         graph_name += "-BNodes"
 
+    print(f"Loading {args.data_dirname / args.data_filename}")
     data = load_data(args.data_dirname, args.data_filename)
 
+    print(f"Getting graph {args.graph_name} from {args.db_name}")
     adb_graph = get_graph(args.db_name, args.graph_name)
 
+    print("Defining and creating vertex and edge collections")
     vertex_collections, edge_collections = init_collections(adb_graph)
 
+    print("Inserting vertices and edges form each row of the manually curated data")
     for _, row in data.iterrows():
-
-        add_vertices_and_edges_from_row(row, vertex_collections, edge_collections)
+        insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections)
