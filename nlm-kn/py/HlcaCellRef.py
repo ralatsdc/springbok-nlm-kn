@@ -285,7 +285,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     #             }
     #         )
     #     cell_type_cellref_vertex = vertex_collections["CL"].get(_key)
-    # cell_type_cl_vertex = {}
+    cell_type_cl_vertex = {}
     if not (
         pd.isna(row["CL_cell_type"])
         or pd.isna(row["CL_PURL"])
@@ -496,8 +496,8 @@ def main():
     print(f"Loading {args.data_dirname / args.data_filename}")
     data = load_data(args.data_dirname, args.data_filename)
 
-    print(f"Getting graph {args.graph_name} from {args.db_name}")
-    adb_graph = get_graph(args.db_name, args.graph_name)
+    print(f"Getting graph {graph_name} from {db_name}")
+    adb_graph = get_graph(db_name, graph_name)
 
     print("Defining and creating vertex and edge collections")
     vertex_collections, edge_collections = init_collections(adb_graph)
@@ -505,3 +505,7 @@ def main():
     print("Inserting vertices and edges form each row of the manually curated data")
     for _, row in data.iterrows():
         insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections)
+
+
+if __name__ == "__main__":
+    main()
