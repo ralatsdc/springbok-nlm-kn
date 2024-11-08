@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 from pathlib import Path
 from pprint import pprint
@@ -11,7 +12,7 @@ from rdflib.term import BNode, Literal
 
 
 URIREF_PATTERN = re.compile(r"/obo/([A-Za-z]*)_([A-Z0-9]*)")
-VALID_VERTICES = ["UBERON", "CL", "GO", "NCBITaxon", "PR", "PATO", "CHEBI"]
+VALID_VERTICES = set(["UBERON", "CL", "GO", "NCBITaxon", "PR", "PATO", "CHEBI"])
 
 
 def parse_ols(ols_dir, ols_fnm):
@@ -21,7 +22,7 @@ def parse_ols(ols_dir, ols_fnm):
 
     Parameters
     ----------
-    ols_dir : str
+    ols_dir : str | Path
         Name of directory containing downloaded ontology XML
     ols_fnm : str
         Name of downloaded ontology XML file
@@ -191,7 +192,7 @@ def collect_fnode_triples(rdf_graph):
 
     Returns
     -------
-    triples : list(tuples)
+    triples : list(tuple)
         List of tuples which contain each triple
     """
     triples = []
@@ -462,7 +463,7 @@ def load_triples_into_adb_graph(
 
     Parameters
     ----------
-    triples : list(tuples)
+    triples : list(tuple)
         List of tuples which contain each triple
     adb_graph : arango.graph.Graph
         An ArangoDB graph instance
@@ -853,25 +854,54 @@ def update_vertex_from_triple(adb_graph, vertex_collections, s, p, o, ro=None):
 
 def main():
 
-    # TODO: Add argument parsing.
+    parser = argparse.ArgumentParser(description="Load Cell Ontology")
+    parser.add_argument(
+        "--bioportal-dirname",
+        default=Path("../data/bioportal"),
+        help="Name of directory containing ontologies downloaded from BioPortal",
+    )
+    group = parser.add_argument_group("Cell Ontology (CL)", "Version of the CL to load")
+    exclusive_group = group.add_mutually_exclusive_group(required=True)
+    exclusive_group.add_argument(
+        "--slim", action="store_true", help="Load the slim ontology"
+    )
+    exclusive_group.add_argument(
+        "--full", action="store_true", help="Load the full ontology"
+    )
+    group.add_argument(
+        "--include-bnodes", action="store_true", help="Include BNodes when loading"
+    )
+    parser.add_argument(
+        "--ols-dirname",
+        default=Path("../data/ols"),
+        help="Name of directory containing ontologies downloaded from the Ontology Lookup Service",
+    )
 
-    bioportal_dirname = "../data/bioportal"
-    cl_filename = "cl.owl"
+    args = parser.parse_args()
 
-    ols_dirname = "../data/ols"
+    if args.slim:
+        cl_filename = "general_cell_types_upper_slim.owl"
+        db_name = "BioPortal-Slim"
+        graph_name = "CL-Slim"
+
+    if args.full:
+        cl_filename = "cl.owl"
+        db_name = "BioPortal-Full"
+        graph_name = "CL-Full"
+
+    if args.include_bnodes:
+        db_name += "-BNodes"
+        graph_name += "-BNodes"
+
     ro_filename = "ro.owl"
-
-    db_name = "BioPortal-Full"
-    graph_name = "CL-Full"
-
     log_filename = f"{graph_name}.log"
 
-    print(f"Parsing {Path(bioportal_dirname) / cl_filename} to populate rdflib graph")
+    print(f"Parsing {args.bioportal_dirname / cl_filename} to populate rdflib graph")
     rdf_graph = Graph()
-    rdf_graph.parse(Path(bioportal_dirname) / cl_filename)
+    rdf_graph.parse(args.bioportal_dirname / cl_filename)
 
-    print(f"Parsing {Path(bioportal_dirname) / cl_filename} to identify ids")
-    _, _, ids = parse_ols(bioportal_dirname, cl_filename)
+    print(f"Parsing {args.bioportal_dirname / cl_filename} to identify ids")
+    _, _, ids = parse_ols(args.bioportal_dirname, cl_filename)
     print(ids)
 
     print("Counting triple types in rdflib graph")
@@ -895,7 +925,7 @@ def main():
 
     print("Collecting and printing all blank node triple sets in rdflib graph")
     bnode_triple_sets = {}
-    ro, _, _ = parse_ols(ols_dirname, ro_filename)
+    ro, _, _ = parse_ols(args.ols_dirname, ro_filename)
     collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="subject", ro=ro)
     collect_bnode_triple_sets(rdf_graph, bnode_triple_sets, use="object", ro=ro)
     bnode_triple_sets_filename = log_filename.replace(".log", "_bnode_triple_sets.txt")
@@ -916,8 +946,8 @@ def main():
     db = adb.create_or_get_database(db_name)
     adb.delete_graph(db, graph_name)
     adb_graph = adb.create_or_get_graph(db, graph_name)
-    if db_name == "BioPortal-BNode":
-        VALID_VERTICES.extend(["BNode", "RO"])
+    if args.include_bnodes:
+        VALID_VERTICES.update(set(["BNode", "RO"]))
         triples_to_populate = triples
     else:
         triples_to_populate = fnode_triples.copy()
