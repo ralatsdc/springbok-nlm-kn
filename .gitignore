@@ -6,16 +6,15 @@
 .notes
 .nextflow.*
 .poetry
+.pybiomart.sqlite
+.tern-port
 .venv
 .zshenv
 *.csv
 *.H5AD
 *.h5ad
+*.json
 *.log*
-<<<<<<< HEAD
-*.txt
-=======
->>>>>>> main
 *.out
 *.parquet
 *.pickle
