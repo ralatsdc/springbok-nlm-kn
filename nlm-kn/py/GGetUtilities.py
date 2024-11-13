@@ -37,8 +37,12 @@ for marker_name, marker_id in marker_ids.items():
     gdata[marker_name] = {}
     gdata[marker_name]["marker_id"] = marker_id
     try:
-        gdata[marker_name]["diseases"] = gget.opentargets(marker_id, resource='diseases', json=True, verbose=True)
-        gdata[marker_name]["drugs"] = gget.opentargets(marker_id, resource='drugs', json=True, verbose=True)
+        gdata[marker_name]["diseases"] = gget.opentargets(
+            marker_id, resource="diseases", json=True, verbose=True
+        )
+        gdata[marker_name]["drugs"] = gget.opentargets(
+            marker_id, resource="drugs", json=True, verbose=True
+        )
     except Exception as exc:
         print(f"Could not gget marker id: {marker_id}")
 
