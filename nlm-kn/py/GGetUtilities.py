@@ -27,30 +27,50 @@ marker_names = []
 marker_ids = {}
 for marker_name in marker_names:
     if marker_name in annot.index:
-        marker_id = annot.loc[marker_name, "ensembl_gene_id"]
-        if isinstance(marker_id, pd.core.series.Series):
-            # TODO: Decide how to handle multiple ids per name
-            marker_id = marker_id.iloc[0]
-        marker_ids[marker_name] = marker_id
+        mid = annot.loc[marker_name, "ensembl_gene_id"]
+        if isinstance(mid, pd.core.series.Series):
+            marker_ids[marker_name] = mid.to_list()
+        else:
+            marker_ids[marker_name] = [mid]
     else:
         print(f"Could not find marker name: {marker_name}")
 
-# Get diseases and drugs for each marker id
-gdata = {}
-for marker_name, marker_id in marker_ids.items():
-    gdata[marker_name] = {}
-    gdata[marker_name]["marker_id"] = marker_id
-    try:
-        gdata[marker_name]["diseases"] = gget.opentargets(
-            marker_id, resource="diseases", json=True, verbose=True
-        )
-        gdata[marker_name]["drugs"] = gget.opentargets(
-            marker_id, resource="drugs", json=True, verbose=True
-        )
-    except Exception as exc:
-        print(f"Could not gget marker id: {marker_id}")
+# Get resources for each marker name
+resources = [
+    "diseases",
+    "drugs",
+    "interactions",
+    "tractability",
+    "expression",
+    "depmap",
+]
+nMNm = 0
+for mname, mids in marker_ids.items():
+    nMNm += 1
+    gdata = {}
+    gdata["name"] = mname
+    gdata["ids"] = mids
+    gdata["resources"] = resources
 
-# Write the diseases and drugs data to a JSON file
-gdata_filename = mdata_filename.replace(".xlsm", ".json")
-with open(mdata_dirname / gdata_filename, "w") as ofp:
-    json.dump(gdata, ofp)
+    # Get resources for each marker id
+    for mid in mids:
+        gdata[mid] = {}
+        for resource in resources:
+            try:
+                gdata[mid][resource] = gget.opentargets(
+                    mid, resource=resource, json=True, verbose=True
+                )
+            except Exception as exc:
+                gdata[mid][resource] = {}
+                print(
+                    f"Could not gget resource: {resource} for marker id: {mid} for marker name: {mname}"
+                )
+
+    # Write the resources for the current marker name to a JSON file
+    gdata_filename = mdata_filename.replace(".xlsm", f"_{mname}.json")
+    # with open(mdata_dirname / gdata_filename, "w") as ofp:
+    with open(gdata_filename, "w") as ofp:
+        json.dump(gdata, ofp, indent=4)
+
+    if nMNm == 8:
+        break
