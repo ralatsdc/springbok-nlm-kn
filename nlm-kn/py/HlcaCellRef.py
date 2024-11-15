@@ -1,11 +1,14 @@
 import argparse
 import ast
+import json
 from pathlib import Path
 import random
 import string
 
+import gget
 import ArangoDB as adb
 import pandas as pd
+import scanpy as sc
 
 from CellOntology import parse_term
 
@@ -27,24 +30,115 @@ def get_uuid():
     return "".join(random.choices(ALPHABET, k=8))
 
 
-def load_data(data_dirname, data_filename):
+def get_gene_name_to_ids_map():
+
+    # TODO: Write documentation
+
+    # Retrieve gene name to ids mapping
+    return sc.queries.biomart_annotations(
+        "hsapiens", ["ensembl_gene_id", "external_gene_name"], use_cache=True
+    ).set_index("external_gene_name")
+
+
+def map_gene_name_to_ids(name, nm2id):
+
+    # TODO: Write documentation
+
+    if name in nm2id.index:
+        id = nm2id.loc[name, "ensembl_gene_id"]
+        if isinstance(id, pd.core.series.Series):
+            return id.to_list()
+        else:
+            return [id]
+    else:
+        print(f"Could not find ids for name: {name}")
+        return []
+
+
+def load_mdata(mdata_dirname, mdata_filename):
     """Load manually curated data.
 
     Parameters
     ----------
-    data_dirname : str
+    mdata_dirname : str
         Name of directory containing manually curated data
-    data_filename : str
+    mdata_filename : str
         Name of Excel file containing manually curated data
 
     Returns
     -------
-    data : pd.DataFrame
+    mdata : pd.DataFrame
         DataFrame containing manually curated data
     """
-    data = pd.read_excel(data_dirname / data_filename, header=1, skiprows=0)
-    data["uuid"] = [get_uuid() for idx in data.index]
-    return data
+    mdata = pd.read_excel(mdata_dirname / mdata_filename, header=1, skiprows=0)
+    mdata["uuid"] = [get_uuid() for idx in mdata.index]
+    return mdata
+
+
+def init_gdata(mdata):
+
+    # TODO: Write documentation
+
+    gdata = {}
+    gdata["cell_types"] = {}
+    gdata["marker_names"] = set()
+    gdata["marker_ids"] = set()
+
+    nm2ids = get_gene_name_to_ids_map()
+
+    for _, row in mdata.iterrows():
+
+        if pd.isna(row["HLCA_cellset"]):
+            continue
+        cell_type = row["HLCA_cellset"]
+        gdata["cell_types"][cell_type] = {}
+
+        if pd.isna(row["HLCA_NSForestMarkers"]):
+            continue
+        marker_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
+        gdata["cell_types"][cell_type]["marker_names"] = {}
+        gdata["marker_names"] |= set(marker_names)
+
+        for marker_name in marker_names:
+            marker_ids = map_gene_name_to_ids(marker_name, nm2ids)
+            gdata["cell_types"][cell_type]["marker_names"][marker_name] = {}
+            gdata["cell_types"][cell_type]["marker_names"][marker_name][
+                "marker_ids"
+            ] = marker_ids
+            gdata["marker_ids"] |= set(marker_ids)
+
+    gdata["marker_names"] = list(gdata["marker_names"])
+    gdata["marker_ids"] = list(gdata["marker_ids"])
+
+    return gdata
+
+
+def load_gdata(gdata):
+
+    # TODO: Write documentation
+
+    resources = [
+        "diseases",
+        "drugs",
+        "interactions",
+        "tractability",
+        "expression",
+        "depmap",
+    ]
+
+    gdata["gene_ids"] = {}
+    for id in gdata["marker_ids"][0:5]:
+        gdata["gene_ids"][id] = {}
+
+        gdata["gene_ids"][id]["resources"] = {}
+        for resource in resources:
+            try:
+                gdata["gene_ids"][id]["resources"][resource] = gget.opentargets(
+                    id, resource=resource, json=True, verbose=True
+                )
+            except Exception as exc:
+                print(f"Could not gget resource: {resource} for id: {id}")
+                gdata["gene_ids"][id]["resources"][resource] = {}
 
 
 def get_graph(db_name, graph_name):
@@ -454,12 +548,12 @@ def main():
 
     parser = argparse.ArgumentParser(description="Load Manually Curated Data")
     parser.add_argument(
-        "--data-dirname",
+        "--mdata-dirname",
         default=Path("../data/nlm-kn"),
         help="Name of directory containing manually curated data",
     )
     parser.add_argument(
-        "--data-filename",
+        "--mdata-filename",
         default="HLCA_CellRef_matching_ver3_import1.xlsm",
         help="Name of file containing manually curated data",
     )
@@ -493,19 +587,29 @@ def main():
         db_name += "-BNodes"
         graph_name += "-BNodes"
 
-    print(f"Loading {args.data_dirname / args.data_filename}")
-    data = load_data(args.data_dirname, args.data_filename)
+    print(f"Loading {args.mdata_dirname / args.mdata_filename}")
+    mdata = load_mdata(args.mdata_dirname, args.mdata_filename)
 
-    print(f"Getting graph {graph_name} from {db_name}")
-    adb_graph = get_graph(db_name, graph_name)
+    gdata = init_gdata(mdata)
 
-    print("Defining and creating vertex and edge collections")
-    vertex_collections, edge_collections = init_collections(adb_graph)
+    load_gdata(gdata)
 
-    print("Inserting vertices and edges form each row of the manually curated data")
-    for _, row in data.iterrows():
-        insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections)
+    gdata_filename = args.mdata_filename.replace(".xlsm", ".json")
+    with open(args.mdata_dirname / gdata_filename, "w") as ofp:
+        json.dump(gdata, ofp, indent=4)
+
+    return mdata, gdata
+
+    # print(f"Getting graph {graph_name} from {db_name}")
+    # adb_graph = get_graph(db_name, graph_name)
+
+    # print("Defining and creating vertex and edge collections")
+    # vertex_collections, edge_collections = init_collections(adb_graph)
+
+    # print("Inserting vertices and edges form each row of the manually curated data")
+    # for _, row in mdata.iterrows():
+    #     insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections)
 
 
 if __name__ == "__main__":
-    main()
+    mdata, gdata = main()
