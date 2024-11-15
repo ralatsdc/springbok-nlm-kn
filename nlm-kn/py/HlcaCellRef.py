@@ -31,19 +31,37 @@ def get_uuid():
 
 
 def get_gene_name_to_ids_map():
+    """Query BioMart to map gene names to ids.
 
-    # TODO: Write documentation
+    Parameters
+    ----------
+    None
 
-    # Retrieve gene name to ids mapping
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame indexed by gene name containing gene id
+    """
     return sc.queries.biomart_annotations(
         "hsapiens", ["ensembl_gene_id", "external_gene_name"], use_cache=True
     ).set_index("external_gene_name")
 
 
 def map_gene_name_to_ids(name, nm2id):
+    """Map a gene name to a gene id list.
 
-    # TODO: Write documentation
+    Parameters
+    ----------
+    name : str
+        Gene name
+    nm2id : pd.DataFrame
+        DataFrame indexed by name containing id
 
+    Returns
+    -------
+    list
+        Gene ids
+    """
     if name in nm2id.index:
         id = nm2id.loc[name, "ensembl_gene_id"]
         if isinstance(id, pd.core.series.Series):
@@ -60,7 +78,7 @@ def load_mdata(mdata_dirname, mdata_filename):
 
     Parameters
     ----------
-    mdata_dirname : str
+    mdata_dirname : Path
         Name of directory containing manually curated data
     mdata_filename : str
         Name of Excel file containing manually curated data
@@ -76,30 +94,39 @@ def load_mdata(mdata_dirname, mdata_filename):
 
 
 def init_gdata(mdata):
+    """Initialize gget data.
 
-    # TODO: Write documentation
+    Parameters
+    ----------
+    mdata : pd.DataFrame
+        DataFrame containing manually curated data
 
+    Returns
+    -------
+    gdata : dict
+        Dictionary containing HLCA cell types, marker names, marker
+        ids for each marker name, and all unique marker ids
+    """
+    nm2ids = get_gene_name_to_ids_map()
     gdata = {}
     gdata["cell_types"] = {}
-    gdata["marker_names"] = set()
     gdata["marker_ids"] = set()
-
-    nm2ids = get_gene_name_to_ids_map()
-
     for _, row in mdata.iterrows():
 
+        # Collect HLCA cell types
         if pd.isna(row["HLCA_cellset"]):
             continue
         cell_type = row["HLCA_cellset"]
         gdata["cell_types"][cell_type] = {}
 
+        # Collect marker names
         if pd.isna(row["HLCA_NSForestMarkers"]):
             continue
         marker_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
         gdata["cell_types"][cell_type]["marker_names"] = {}
-        gdata["marker_names"] |= set(marker_names)
-
         for marker_name in marker_names:
+
+            # Collect marker id
             marker_ids = map_gene_name_to_ids(marker_name, nm2ids)
             gdata["cell_types"][cell_type]["marker_names"][marker_name] = {}
             gdata["cell_types"][cell_type]["marker_names"][marker_name][
@@ -107,38 +134,71 @@ def init_gdata(mdata):
             ] = marker_ids
             gdata["marker_ids"] |= set(marker_ids)
 
-    gdata["marker_names"] = list(gdata["marker_names"])
+    # Marker ids are more convenient as a list
     gdata["marker_ids"] = list(gdata["marker_ids"])
 
     return gdata
 
 
-def load_gdata(gdata):
+def load_gdata(mdata, gdata_dirname, gdata_filename):
+    """Call gget for each gene id, collecting all specified resources.
 
-    # TODO: Write documentation
+    Parameters
+    ----------
+    mdata : pd.DataFrame
+        DataFrame containing manually curated data
+    gdata_dirname : Path
+        Name of directory containing gget data
+    gdata_filename : str
+        Name of JSON file containing gget data
 
-    resources = [
-        "diseases",
-        "drugs",
-        "interactions",
-        "tractability",
-        "expression",
-        "depmap",
-    ]
+    Returns
+    -------
+    gdata : dict
+        Dictionary containing HLCA cell types, marker names, marker
+        ids for each marker name, all specified resources for each
+        marker id, and all unique marker ids
+    """
+    # Create and dump, or load gget data
+    if not (gdata_dirname / gdata_filename).exists():
+        # Create gget data
+        gdata = init_gdata(mdata)
+        resources = [
+            "diseases",
+            "drugs",
+            "interactions",
+            "tractability",
+            "expression",
+            "depmap",
+        ]
 
-    gdata["gene_ids"] = {}
-    for id in gdata["marker_ids"][0:5]:
-        gdata["gene_ids"][id] = {}
+        # Collect gene ids
+        gdata["gene_ids"] = {}
+        for id in gdata["marker_ids"]:
+            gdata["gene_ids"][id] = {}
 
-        gdata["gene_ids"][id]["resources"] = {}
-        for resource in resources:
-            try:
-                gdata["gene_ids"][id]["resources"][resource] = gget.opentargets(
-                    id, resource=resource, json=True, verbose=True
-                )
-            except Exception as exc:
-                print(f"Could not gget resource: {resource} for id: {id}")
-                gdata["gene_ids"][id]["resources"][resource] = {}
+            # Collect resources
+            gdata["gene_ids"][id]["resources"] = {}
+            for resource in resources:
+                try:
+                    gdata["gene_ids"][id]["resources"][resource] = gget.opentargets(
+                        id, resource=resource, json=True, verbose=True
+                    )
+                except Exception as exc:
+                    print(f"Could not gget resource: {resource} for id: {id}")
+                    gdata["gene_ids"][id]["resources"][resource] = {}
+
+        # Dump gget data
+        with open(gdata_dirname / gdata_filename, "w") as fp:
+            json.dump(gdata, fp, indent=4)
+
+    else:
+
+        # Load gget data
+        with open(gdata_dirname / gdata_filename, "r") as fp:
+            gdata = json.load(fp)
+
+    return gdata
 
 
 def get_graph(db_name, graph_name):
@@ -187,6 +247,9 @@ def init_collections(adb_graph):
         "CL",
         "gene_name",
         "publication",
+        "gene_id",
+        "disease",
+        "drug_product",
     ]
     for vertex_name in vertex_names:
         collection = adb.create_or_get_vertex_collection(adb_graph, vertex_name)
@@ -202,6 +265,10 @@ def init_collections(adb_graph):
         ("cell_set", "publication"),
         ("CL", "CL"),
         ("gene_name", "biomarker_combination"),
+        ("gene_name", "gene_id"),
+        ("gene_id", "disease"),
+        ("drug_product", "gene_id"),
+        ("drug_product", "disease"),
     ]
     for vertex_name_pair in vertex_name_pairs:
         from_vertex = vertex_name_pair[0]
@@ -214,8 +281,9 @@ def init_collections(adb_graph):
     return vertex_collections, edge_collections
 
 
-def insert_vertices(vertex_collections):
-    """Add the anatomic structure and publication vertices.
+def insert_anatomic_structure_and_publication_vertices(vertex_collections):
+    """Insert the single anatomic structure and two publication
+    vertices.
 
     Parameters
     ----------
@@ -235,7 +303,7 @@ def insert_vertices(vertex_collections):
     # Anatomic structure vertex
     _key = "Organ_12345"
     if not vertex_collections["anatomic_structure"].has(_key):
-        vertex_collections["anatomic_structure"].insert({"_key": _key, "name": "lung"})
+        vertex_collections["anatomic_structure"].insert({"_key": _key, "label": "lung"})
     anatomic_structure_vertex = vertex_collections["anatomic_structure"].get(_key)
 
     # Publication vertices
@@ -244,7 +312,7 @@ def insert_vertices(vertex_collections):
         vertex_collections["publication"].insert(
             {
                 "_key": _key,
-                "name": "HLCA_2023_Sikkema_doi.org/10.1038/s41591-023-02327-2",
+                "label": "HLCA_2023_Sikkema_doi.org/10.1038/s41591-023-02327-2",
             }
         )
     publication_hlca_vertex = vertex_collections["publication"].get(_key)
@@ -253,7 +321,7 @@ def insert_vertices(vertex_collections):
         vertex_collections["publication"].insert(
             {
                 "_key": _key,
-                "name": "cellRef_2023_Guo_doi.org/10.1038/s41467-023-40173-5",
+                "label": "cellRef_2023_Guo_doi.org/10.1038/s41467-023-40173-5",
             }
         )
     publication_cellref_vertex = vertex_collections["publication"].get(_key)
@@ -265,8 +333,49 @@ def insert_vertices(vertex_collections):
     )
 
 
-def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections):
-    """Add vertices and edges from the given row of the DataFrame containing manually curated data.
+def insert_triples(triples, edge_collections):
+    """Insert triples into the ArangoDB graph.
+
+    Parameters
+    ----------
+    triples : list(tuple)
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
+
+    Returns
+    -------
+    None
+    """
+    for triple in triples:
+
+        from_vertex = triple[0]  # subject
+        predicate = triple[1]
+        to_vertex = triple[2]  # object
+
+        # All vertices are valid or an empty dictionary
+        if from_vertex == {} or to_vertex == {}:
+            continue
+
+        # Define edge, noting that all predicates are arbitrary dictionaries
+        edge = {
+            "_key": from_vertex["_key"] + "-" + to_vertex["_key"],
+            "_from": from_vertex["_id"],
+            "_to": to_vertex["_id"],
+        }
+        edge.update(predicate)
+
+        # Insert triple
+        from_vertex_collection = from_vertex["_id"].split("/")[0]
+        to_vertex_collection = to_vertex["_id"].split("/")[0]
+        edge_name = from_vertex_collection + "-" + to_vertex_collection
+        if not edge_collections[edge_name].has(edge):
+            edge_collections[edge_name].insert(edge)
+
+
+def insert_vertices_and_edges_from_mdata_row(row, vertex_collections, edge_collections):
+    """Insert vertices and edges from each row of the manually curated
+    data.
 
     Parameters
     ----------
@@ -277,12 +386,12 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     -------
     None
     """
-    # Add the anatomic structure and publication vertices
+    # Insert the anatomic structure and publication vertices
     anatomic_structure_vertex, publication_hlca_vertex, publication_cellref_vertex = (
-        insert_vertices(vertex_collections)
+        insert_anatomic_structure_and_publication_vertices(vertex_collections)
     )
 
-    # Add biomarker combination vertices
+    # Insert biomarker combination vertices
     hlca_gene_names = []
     biomarker_combination_hlca_vertex = {}
     cellref_gene_names = []
@@ -297,7 +406,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
             vertex_collections["biomarker_combination"].insert(
                 {
                     "_key": _key,
-                    "name": hlca_gene_names,
+                    "label": hlca_gene_names,
                 }
             )
         biomarker_combination_hlca_vertex = vertex_collections[
@@ -311,7 +420,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
             _key = "hlca-" + row["uuid"]
             if not vertex_collections["biomarker_combination"].has(_key):
                 vertex_collections["biomarker_combination"].insert(
-                    {"_key": _key, "name": hlca_gene_names}
+                    {"_key": _key, "label": hlca_gene_names}
                 )
             biomarker_combination_hlca_vertex = vertex_collections[
                 "biomarker_combination"
@@ -324,14 +433,14 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
                 vertex_collections["biomarker_combination"].insert(
                     {
                         "_key": _key,
-                        "name": cellref_gene_names,
+                        "label": cellref_gene_names,
                     }
                 )
             biomarker_combination_cellref_vertex = vertex_collections[
                 "biomarker_combination"
             ].get(_key)
 
-    # Add cell set vertices
+    # Insert cell set vertices
     cell_set_hlca_vertex = {}
     if not pd.isna(row["HLCA_cellset"]):
         _key = "hlca-" + row["uuid"]
@@ -339,7 +448,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
             vertex_collections["cell_set"].insert(
                 {
                     "_key": _key,
-                    "name": row["HLCA_cellset"],
+                    "label": row["HLCA_cellset"],
                 }
             )
         cell_set_hlca_vertex = vertex_collections["cell_set"].get(_key)
@@ -350,12 +459,12 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
             vertex_collections["cell_set"].insert(
                 {
                     "_key": _key,
-                    "name": row["cellref_cellset"],
+                    "label": row["cellref_cellset"],
                 }
             )
         cell_set_cellref_vertex = vertex_collections["cell_set"].get(_key)
 
-    # Add cell type vertices
+    # Insert cell type vertices
     # TODO: Decide whether we need these cell types, or not
     # cell_type_hlca_vertex = {}
     # if not pd.isna(row["Cell_type_HLCA"]):
@@ -364,7 +473,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     #         vertex_collections["CL"].insert(
     #             {
     #                 "_key": _key,
-    #                 "name": row["Cell_type_HLCA"],
+    #                 "label": row["Cell_type_HLCA"],
     #             }
     #         )
     #     cell_type_hlca_vertex = vertex_collections["CL"].get(_key)
@@ -375,7 +484,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     #         vertex_collections["CL"].insert(
     #             {
     #                 "_key": _key,
-    #                 "name": row["Cell_type_cellref"],
+    #                 "label": row["Cell_type_cellref"],
     #             }
     #         )
     #     cell_type_cellref_vertex = vertex_collections["CL"].get(_key)
@@ -409,7 +518,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         #     vertex_collections["CL"].insert(
         #         {
         #             "_key": _key,
-        #             "name": row["CL_cell_type"],
+        #             "label": row["CL_cell_type"],
         #             "purl": row["CL_PURL"],
         #             "current definition": str(row["Current CL definition"]),
         #             "proposed definition": str(
@@ -419,14 +528,14 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         #     )
         # cell_type_cl_vertex = vertex_collections["CL"].get(_key)
 
-    # Add gene vertices
+    # Insert gene vertices
     for gene_name in hlca_gene_names + cellref_gene_names:
         _key = gene_name
         if not vertex_collections["gene_name"].has(_key):
             vertex_collections["gene_name"].insert(
                 {
                     "_key": _key,
-                    "name": gene_name,
+                    "label": gene_name,
                 }
             )
             gene_name_vertex = vertex_collections["gene_name"].get(_key)
@@ -439,12 +548,12 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         [
             (
                 biomarker_combination_hlca_vertex,
-                {"name": "IS_MARKER_FOR", "Fbeta": row["HLCA_Fbeta"]},
+                {"label": "IS_MARKER_FOR", "Fbeta": row["HLCA_Fbeta"]},
                 cell_set_hlca_vertex,
             ),
             (
                 biomarker_combination_cellref_vertex,
-                {"name": "IS_MARKER_FOR", "Fbeta": row["CellRef_Fbeta"]},
+                {"label": "IS_MARKER_FOR", "Fbeta": row["CellRef_Fbeta"]},
                 cell_set_cellref_vertex,
             ),
         ]
@@ -453,9 +562,9 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     # Define and collect (cell type, PART_OF, anatomic structure) triples
     triples.extend(
         [
-            # (cell_type_hlca_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
-            # (cell_type_cellref_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
-            (cell_type_cl_vertex, {"name": "PART_OF"}, anatomic_structure_vertex),
+            # (cell_type_hlca_vertex, {"label": "PART_OF"}, anatomic_structure_vertex),
+            # (cell_type_cellref_vertex, {"label": "PART_OF"}, anatomic_structure_vertex),
+            (cell_type_cl_vertex, {"label": "PART_OF"}, anatomic_structure_vertex),
         ]
     )
 
@@ -466,16 +575,16 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     ):
         triples.extend(
             [
-                # (cell_set_hlca_vertex, {"name": "IS_INSTANCE"}, cell_type_hlca_vertex),
+                # (cell_set_hlca_vertex, {"label": "IS_INSTANCE"}, cell_type_hlca_vertex),
                 (
                     cell_set_hlca_vertex,
-                    {"name": "IS_INSTANCE", "match": row["predicate_HLCA"]},
+                    {"label": "IS_INSTANCE", "match": row["predicate_HLCA"]},
                     cell_type_cl_vertex,
                 ),
-                # (cell_set_cellref_vertex, {"name": "IS_INSTANCE"}, cell_type_cellref_vertex),
+                # (cell_set_cellref_vertex, {"label": "IS_INSTANCE"}, cell_type_cellref_vertex),
                 (
                     cell_set_cellref_vertex,
-                    {"name": "IS_INSTANCE", "match": row["predicate_HLCA"]},
+                    {"label": "IS_INSTANCE", "match": row["predicate_HLCA"]},
                     cell_type_cl_vertex,
                 ),
             ]
@@ -485,17 +594,19 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     for gene_name in hlca_gene_names:
         _key = gene_name
         gene_name_vertex = vertex_collections["gene_name"].get(_key)
-        triples.append((cell_set_hlca_vertex, {"name": "EXPRESSES"}, gene_name_vertex))
+        triples.append((cell_set_hlca_vertex, {"label": "EXPRESSES"}, gene_name_vertex))
     for gene_name in cellref_gene_names:
         _key = gene_name
         gene_name_vertex = vertex_collections["gene_name"].get(_key)
-        triples.append((cell_set_cellref_vertex, {"name": "EXPRESSES"}, gene_name_vertex))
+        triples.append(
+            (cell_set_cellref_vertex, {"label": "EXPRESSES"}, gene_name_vertex)
+        )
 
     # Define and collect (cell set, SOURCE, publication) triples
     triples.extend(
         [
-            (cell_set_hlca_vertex, {"name": "SOURCE"}, publication_hlca_vertex),
-            (cell_set_cellref_vertex, {"name": "SOURCE"}, publication_cellref_vertex),
+            (cell_set_hlca_vertex, {"label": "SOURCE"}, publication_hlca_vertex),
+            (cell_set_cellref_vertex, {"label": "SOURCE"}, publication_cellref_vertex),
         ]
     )
 
@@ -504,7 +615,7 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         _key = gene_name
         gene_name_vertex = vertex_collections["gene_name"].get(_key)
         triples.append(
-            (gene_name_vertex, {"name": "PART_OF"}, biomarker_combination_hlca_vertex)
+            (gene_name_vertex, {"label": "PART_OF"}, biomarker_combination_hlca_vertex)
         )
     for gene_name in cellref_gene_names:
         _key = gene_name
@@ -512,36 +623,116 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         triples.append(
             (
                 gene_name_vertex,
-                {"name": "PART_OF"},
+                {"label": "PART_OF"},
                 biomarker_combination_cellref_vertex,
             )
         )
 
     # Insert all triples
-    for triple in triples:
+    insert_triples(triples, edge_collections)
 
-        from_vertex = triple[0]  # subject
-        predicate = triple[1]
-        to_vertex = triple[2]  # object
 
-        # All vertices are valid or an empty dictionary
-        if from_vertex == {} or to_vertex == {}:
-            continue
+def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
+    gdata, gene_name, gene_id, vertex_collections, edge_collections
+):
+    """Insert vertices and edges for each gene name and id from the
+    gget data.
 
-        # Define edge, noting that all predicates are arbitrary dictionaries
-        edge = {
-            "_key": from_vertex["_key"] + "-" + to_vertex["_key"],
-            "_from": from_vertex["_id"],
-            "_to": to_vertex["_id"],
-        }
-        edge.update(predicate)
+    Parameters
+    ----------
+    gdata
+    gene_name
+    gene_id
+    vertex_collections
+    edge_collections
 
-        # Insert triple
-        from_vertex_collection = from_vertex["_id"].split("/")[0]
-        to_vertex_collection = to_vertex["_id"].split("/")[0]
-        edge_name = from_vertex_collection + "-" + to_vertex_collection
-        if not edge_collections[edge_name].has(edge):
-            edge_collections[edge_name].insert(edge)
+    Returns
+    -------
+    None
+    """
+    # Initialize triples
+    triples = []
+
+    # Get gene name vertex
+    gene_name_vertex = {}
+    if vertex_collections["gene_name"].has(gene_name):
+        gene_name_vertex = vertex_collections["gene_name"].get(gene_name)
+
+    # Insert gene id vertex
+    _key = gene_id
+    if not vertex_collections["gene_id"].has(_key):
+        vertex_collections["gene_id"].insert(
+            {
+                "_key": _key,
+                "label": gene_id,
+            }
+        )
+    gene_id_vertex = vertex_collections["gene_id"].get(_key)
+
+    # Define and collect (gene name, HAS, gene id) triples
+    triples.append((gene_name_vertex, {"label": "HAS"}, gene_id_vertex))
+
+    # Get diseases and drugs
+    diseases = []
+    drugs = []
+    if gene_id in gdata["gene_ids"]:
+        diseases = gdata["gene_ids"][gene_id]["resources"]["diseases"]
+        drugs = gdata["gene_ids"][gene_id]["resources"]["drugs"]
+
+    for disease in diseases:
+
+        # Insert disease vertex
+        _key = disease["id"]
+        if not vertex_collections["disease"].has(_key):
+            disease["_key"] = _key
+            disease["label"] = disease["name"]
+            vertex_collections["disease"].insert(disease)
+        disease_vertex = vertex_collections["disease"].get(_key)
+
+        # Define and collect (gene id, IS_BASIS_FOR_CONDITION, disease) triples
+        triples.append(
+            (
+                gene_id_vertex,
+                {"label": "IS_BASIS_FOR_CONDITION"},
+                disease_vertex,
+            )
+        )
+
+    for drug in drugs:
+
+        # Insert drug product vertex
+        _key = drug["id"]
+        if not vertex_collections["drug_product"].has(_key):
+            drug["_key"] = _key
+            drug["label"] = drug["name"]
+            vertex_collections["drug_product"].insert(drug)
+        drug_product_vertex = vertex_collections["drug_product"].get(_key)
+
+        # Define and collect (drug product, MOLECULARLY_INTERACTS_WITH, gene id) triples
+        triples.append(
+            (
+                drug_product_vertex,
+                {"label": "MOLECULARLY_INTERACTS_WITH"},
+                gene_id_vertex,
+            )
+        )
+
+        # Get diseases vertex
+        _key = drug["disease_id"]
+        if vertex_collections["disease"].has(_key):
+            disease_vertex = vertex_collections["disease"].get(_key)
+
+            # Define and collect (drug product, IS_SUBSTANCE_THAT_TREATS, disease) triples
+            triples.append(
+                (
+                    drug_product_vertex,
+                    {"label": "IS_SUBSTANCE_THAT_TREATS"},
+                    disease_vertex,
+                )
+            )
+
+    # Insert all triples
+    insert_triples(triples, edge_collections)
 
 
 def main():
@@ -575,6 +766,9 @@ def main():
 
     args = parser.parse_args()
 
+    gdata_dirname = args.mdata_dirname
+    gdata_filename = args.mdata_filename.replace(".xlsm", ".json")
+
     if args.slim:
         db_name = "BioPortal-Slim"
         graph_name = "CL-Slim"
@@ -590,26 +784,30 @@ def main():
     print(f"Loading {args.mdata_dirname / args.mdata_filename}")
     mdata = load_mdata(args.mdata_dirname, args.mdata_filename)
 
-    gdata = init_gdata(mdata)
+    print(f"Loading {gdata_dirname / gdata_filename}")
+    gdata = load_gdata(mdata, gdata_dirname, gdata_filename)
 
-    load_gdata(gdata)
+    print(f"Getting graph {graph_name} from {db_name}")
+    adb_graph = get_graph(db_name, graph_name)
 
-    gdata_filename = args.mdata_filename.replace(".xlsm", ".json")
-    with open(args.mdata_dirname / gdata_filename, "w") as ofp:
-        json.dump(gdata, ofp, indent=4)
+    print("Defining and creating vertex and edge collections")
+    vertex_collections, edge_collections = init_collections(adb_graph)
 
-    return mdata, gdata
+    n_rows = mdata.shape[0]
+    for i_row, row in mdata.iterrows():
+        print("Inserting vertices and edges from row {i_orw} (of {n_row})of the manually curated data")
+        insert_vertices_and_edges_from_mdata_row(
+            row, vertex_collections, edge_collections
+        )
 
-    # print(f"Getting graph {graph_name} from {db_name}")
-    # adb_graph = get_graph(db_name, graph_name)
-
-    # print("Defining and creating vertex and edge collections")
-    # vertex_collections, edge_collections = init_collections(adb_graph)
-
-    # print("Inserting vertices and edges form each row of the manually curated data")
-    # for _, row in mdata.iterrows():
-    #     insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections)
+    print("Inserting vertices and edges for each gene name and id from the gget data")
+    for _, d in gdata["cell_types"].items():
+        for gene_name, e in d["marker_names"].items():
+            for gene_id in e["marker_ids"]:
+                insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
+                    gdata, gene_name, gene_id, vertex_collections, edge_collections
+                )
 
 
 if __name__ == "__main__":
-    mdata, gdata = main()
+    main()
