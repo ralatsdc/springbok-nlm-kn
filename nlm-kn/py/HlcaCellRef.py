@@ -185,7 +185,7 @@ def init_collections(adb_graph):
         "biomarker_combination",
         "cell_set",
         "CL",
-        "gene",
+        "gene_name",
         "publication",
     ]
     for vertex_name in vertex_names:
@@ -198,10 +198,10 @@ def init_collections(adb_graph):
         ("biomarker_combination", "cell_set"),
         ("CL", "anatomic_structure"),
         ("cell_set", "CL"),
-        ("cell_set", "gene"),
+        ("cell_set", "gene_name"),
         ("cell_set", "publication"),
         ("CL", "CL"),
-        ("gene", "biomarker_combination"),
+        ("gene_name", "biomarker_combination"),
     ]
     for vertex_name_pair in vertex_name_pairs:
         from_vertex = vertex_name_pair[0]
@@ -283,21 +283,21 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
     )
 
     # Add biomarker combination vertices
-    hlca_genes = []
+    hlca_gene_names = []
     biomarker_combination_hlca_vertex = {}
-    cellref_genes = []
+    cellref_gene_names = []
     biomarker_combination_cellref_vertex = {}
     if row["HLCA_NSForestMarkers"] == row["CellRef_NSForestMarkers"] and not pd.isna(
         row["HLCA_NSForestMarkers"]
     ):
-        hlca_genes = ast.literal_eval(row["HLCA_NSForestMarkers"])
-        cellref_genes = hlca_genes
+        hlca_gene_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
+        cellref_gene_names = hlca_gene_names
         _key = "hlca-cellref-" + row["uuid"]
         if not vertex_collections["biomarker_combination"].get(_key):
             vertex_collections["biomarker_combination"].insert(
                 {
                     "_key": _key,
-                    "name": hlca_genes,
+                    "name": hlca_gene_names,
                 }
             )
         biomarker_combination_hlca_vertex = vertex_collections[
@@ -307,24 +307,24 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
 
     else:
         if not pd.isna(row["HLCA_NSForestMarkers"]):
-            hlca_genes = ast.literal_eval(row["HLCA_NSForestMarkers"])
+            hlca_gene_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
             _key = "hlca-" + row["uuid"]
             if not vertex_collections["biomarker_combination"].has(_key):
                 vertex_collections["biomarker_combination"].insert(
-                    {"_key": _key, "name": hlca_genes}
+                    {"_key": _key, "name": hlca_gene_names}
                 )
             biomarker_combination_hlca_vertex = vertex_collections[
                 "biomarker_combination"
             ].get(_key)
 
         if not pd.isna(row["CellRef_NSForestMarkers"]):
-            cellref_genes = ast.literal_eval(row["CellRef_NSForestMarkers"])
+            cellref_gene_names = ast.literal_eval(row["CellRef_NSForestMarkers"])
             _key = "cellref-" + row["uuid"]
             if not vertex_collections["biomarker_combination"].has(_key):
                 vertex_collections["biomarker_combination"].insert(
                     {
                         "_key": _key,
-                        "name": cellref_genes,
+                        "name": cellref_gene_names,
                     }
                 )
             biomarker_combination_cellref_vertex = vertex_collections[
@@ -420,16 +420,16 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         # cell_type_cl_vertex = vertex_collections["CL"].get(_key)
 
     # Add gene vertices
-    for gene in hlca_genes + cellref_genes:
-        _key = gene
-        if not vertex_collections["gene"].has(_key):
-            vertex_collections["gene"].insert(
+    for gene_name in hlca_gene_names + cellref_gene_names:
+        _key = gene_name
+        if not vertex_collections["gene_name"].has(_key):
+            vertex_collections["gene_name"].insert(
                 {
                     "_key": _key,
-                    "name": gene,
+                    "name": gene_name,
                 }
             )
-            gene_vertex = vertex_collections["gene"].get(_key)
+            gene_name_vertex = vertex_collections["gene_name"].get(_key)
 
     # Initialize triples
     triples = []
@@ -481,15 +481,15 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
             ]
         )
 
-    # Define and collect (cell set, EXPRESSES, gene) triples
-    for gene in hlca_genes:
-        _key = gene
-        gene_vertex = vertex_collections["gene"].get(_key)
-        triples.append((cell_set_hlca_vertex, {"name": "EXPRESSES"}, gene_vertex))
-    for gene in cellref_genes:
-        _key = gene
-        gene_vertex = vertex_collections["gene"].get(_key)
-        triples.append((cell_set_cellref_vertex, {"name": "EXPRESSES"}, gene_vertex))
+    # Define and collect (cell set, EXPRESSES, gene_name) triples
+    for gene_name in hlca_gene_names:
+        _key = gene_name
+        gene_name_vertex = vertex_collections["gene_name"].get(_key)
+        triples.append((cell_set_hlca_vertex, {"name": "EXPRESSES"}, gene_name_vertex))
+    for gene_name in cellref_gene_names:
+        _key = gene_name
+        gene_name_vertex = vertex_collections["gene_name"].get(_key)
+        triples.append((cell_set_cellref_vertex, {"name": "EXPRESSES"}, gene_name_vertex))
 
     # Define and collect (cell set, SOURCE, publication) triples
     triples.extend(
@@ -499,19 +499,19 @@ def insert_vertices_and_edges_from_row(row, vertex_collections, edge_collections
         ]
     )
 
-    # Define and collect (gene, PART_OF, biomarker combination) triples
-    for gene in hlca_genes:
-        _key = gene
-        gene_vertex = vertex_collections["gene"].get(_key)
+    # Define and collect (gene_name, PART_OF, biomarker combination) triples
+    for gene_name in hlca_gene_names:
+        _key = gene_name
+        gene_name_vertex = vertex_collections["gene_name"].get(_key)
         triples.append(
-            (gene_vertex, {"name": "PART_OF"}, biomarker_combination_hlca_vertex)
+            (gene_name_vertex, {"name": "PART_OF"}, biomarker_combination_hlca_vertex)
         )
-    for gene in cellref_genes:
-        _key = gene
-        gene_vertex = vertex_collections["gene"].get(_key)
+    for gene_name in cellref_gene_names:
+        _key = gene_name
+        gene_name_vertex = vertex_collections["gene_name"].get(_key)
         triples.append(
             (
-                gene_vertex,
+                gene_name_vertex,
                 {"name": "PART_OF"},
                 biomarker_combination_cellref_vertex,
             )
