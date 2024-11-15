@@ -44,33 +44,32 @@ resources = [
     "expression",
     "depmap",
 ]
-nMNm = 0
+gdata = {}
+gdata["resources"] = resources
+# nMNm = 0
 for mname, mids in marker_ids.items():
-    nMNm += 1
-    gdata = {}
-    gdata["name"] = mname
-    gdata["ids"] = mids
-    gdata["resources"] = resources
+    # nMNm += 1
+    gdata[mname] = {}
+    gdata[mname]["ids"] = mids
 
     # Get resources for each marker id
     for mid in mids:
-        gdata[mid] = {}
+        gdata[mname][mid] = {}
         for resource in resources:
             try:
-                gdata[mid][resource] = gget.opentargets(
+                gdata[mname][mid][resource] = gget.opentargets(
                     mid, resource=resource, json=True, verbose=True
                 )
             except Exception as exc:
-                gdata[mid][resource] = {}
+                gdata[mname][mid][resource] = {}
                 print(
                     f"Could not gget resource: {resource} for marker id: {mid} for marker name: {mname}"
                 )
 
-    # Write the resources for the current marker name to a JSON file
-    gdata_filename = mdata_filename.replace(".xlsm", f"_{mname}.json")
-    # with open(mdata_dirname / gdata_filename, "w") as ofp:
-    with open(gdata_filename, "w") as ofp:
-        json.dump(gdata, ofp, indent=4)
+    # if nMNm == 8:
+    #     break
 
-    if nMNm == 8:
-        break
+# Write the resources for all marker names to a JSON file
+gdata_filename = mdata_filename.replace(".xlsm", ".json")
+with open(mdata_dirname / gdata_filename, "w") as ofp:
+    json.dump(gdata, ofp, indent=4)
