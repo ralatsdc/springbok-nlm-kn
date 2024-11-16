@@ -247,7 +247,8 @@ def init_collections(adb_graph):
         "CL",
         "gene_name",
         "publication",
-        "gene_id",
+        # TODO: Restore?
+        # "gene_id",              
         "disease",
         "drug_product",
     ]
@@ -265,9 +266,12 @@ def init_collections(adb_graph):
         ("cell_set", "publication"),
         ("CL", "CL"),
         ("gene_name", "biomarker_combination"),
-        ("gene_name", "gene_id"),
-        ("gene_id", "disease"),
-        ("drug_product", "gene_id"),
+        # TODO: Restore?
+        # ("gene_name", "gene_id"),
+        # ("gene_id", "disease"),
+        ("gene_name", "disease"),
+        # ("drug_product", "gene_id"),
+        ("drug_product", "gene_name"),
         ("drug_product", "disease"),
     ]
     for vertex_name_pair in vertex_name_pairs:
@@ -658,19 +662,21 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
     if vertex_collections["gene_name"].has(gene_name):
         gene_name_vertex = vertex_collections["gene_name"].get(gene_name)
 
+    # TODO: Restore?
     # Insert gene id vertex
-    _key = gene_id
-    if not vertex_collections["gene_id"].has(_key):
-        vertex_collections["gene_id"].insert(
-            {
-                "_key": _key,
-                "label": gene_id,
-            }
-        )
-    gene_id_vertex = vertex_collections["gene_id"].get(_key)
+    # _key = gene_id
+    # if not vertex_collections["gene_id"].has(_key):
+    #     vertex_collections["gene_id"].insert(
+    #         {
+    #             "_key": _key,
+    #             "label": gene_id,
+    #         }
+    #     )
+    # gene_id_vertex = vertex_collections["gene_id"].get(_key)
 
+    # TODO: Restore?
     # Define and collect (gene name, HAS, gene id) triples
-    triples.append((gene_name_vertex, {"label": "HAS"}, gene_id_vertex))
+    # triples.append((gene_name_vertex, {"label": "HAS"}, gene_id_vertex))
 
     # Get diseases and drugs
     diseases = []
@@ -680,6 +686,8 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
         drugs = gdata["gene_ids"][gene_id]["resources"]["drugs"]
 
     for disease in diseases:
+        if disease["score"] < 0.5:
+            continue
 
         # Insert disease vertex
         _key = disease["id"]
@@ -692,7 +700,9 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
         # Define and collect (gene id, IS_BASIS_FOR_CONDITION, disease) triples
         triples.append(
             (
-                gene_id_vertex,
+                # TODO: Restore?
+                # gene_id_vertex,
+                gene_name_vertex,
                 {"label": "IS_BASIS_FOR_CONDITION"},
                 disease_vertex,
             )
@@ -713,7 +723,9 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
             (
                 drug_product_vertex,
                 {"label": "MOLECULARLY_INTERACTS_WITH"},
-                gene_id_vertex,
+                # TODO: Restore?
+                # gene_id_vertex,
+                gene_name_vertex,
             )
         )
 
@@ -793,17 +805,17 @@ def main():
     print("Defining and creating vertex and edge collections")
     vertex_collections, edge_collections = init_collections(adb_graph)
 
-    n_rows = mdata.shape[0]
+    n_row = mdata.shape[0]
     for i_row, row in mdata.iterrows():
-        print("Inserting vertices and edges from row {i_orw} (of {n_row})of the manually curated data")
+        print(f"Inserting vertices and edges from row {i_row} (of {n_row}) of the manually curated data")
         insert_vertices_and_edges_from_mdata_row(
             row, vertex_collections, edge_collections
         )
 
-    print("Inserting vertices and edges for each gene name and id from the gget data")
     for _, d in gdata["cell_types"].items():
         for gene_name, e in d["marker_names"].items():
             for gene_id in e["marker_ids"]:
+                print(f"Inserting vertices and edges for gene name {gene_name} and id {gene_id} from the gget data")
                 insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
                     gdata, gene_name, gene_id, vertex_collections, edge_collections
                 )
