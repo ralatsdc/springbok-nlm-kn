@@ -208,24 +208,56 @@
 \end{frame}
 
 \begin{frame}
-  \frametitle{Publication - cell-set - gene - biomarker-combination network}
+  \frametitle{Publication - Cell-set - Gene - Biomarker-combination network}
   \framesubtitle{}
+  \begin{itemize}\tiny
+  \item[] (biomarker combination, IS\_MARKER\_FOR, cell set): One
+    biomarker combination vertex for both publications, if identical
+  \item[] (cell type, PART\_OF, anatomic structure)
+  \item[] (cell set, IS\_INSTANCE, cell type): Distinct cell set
+    vertices for each publication, even if identical
+  \item[] (cell set, EXPRESSES, gene\_name)
+  \item[] (cell set, SOURCE, publication)
+  \item[] (gene\_name, PART\_OF, biomarker combination)
+  \end{itemize}
   \begin{figure}
     \begin{center}
-      \includegraphics[height=0.8\textheight]{publication-cell-set-gene-biomarker-combination.jpeg}
+      \includegraphics[height=0.6\textheight]{publication-cell-set-gene-biomarker-combination.jpeg}
     \end{center}
   \end{figure}
 \end{frame}
 
 \begin{frame}
-  \frametitle{Gene - drug - disease network}
+  \frametitle{Gene - Drug - Disease network}
   \framesubtitle{}
+  \begin{itemize}\tiny
+  \item[] (gene name, IS\_BASIS\_FOR\_CONDITION, disease)
+  \item[] (drug product, MOLECULARLY\_INTERACTS\_WITH, gene name)
+  \item[] (drug product, IS\_SUBSTANCE\_THAT\_TREATS, disease)
+  \end{itemize}
   \begin{figure}
     \begin{center}
-      \includegraphics[height=0.8\textheight]{gene-drug-disease.jpeg}
+      \includegraphics[height=0.6\textheight]{gene-drug-disease.jpeg}
     \end{center}
   \end{figure}
 \end{frame}
+
+%% cell\_set-publication
+%% cell\_set-CL
+
+%% cell\_set-publication
+%% biomarker\_combination-cell\_set
+%% gene\_name-biomarker\_combination
+
+%% cell\_set-publication
+%% biomarker\_combination-cell\_set
+%% gene\_name-biomarker\_combination
+%% gene\_name-disease from one shared gene and filter out EFO
+
+%% cell\_set-publication
+%% biomarker\_combination-cell\_set
+%% gene\_name-biomarker\_combination
+%% drug\_product-gene\_name from one shared gene
 
 %% f
 %% \begin{frame}
