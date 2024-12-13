@@ -30,6 +30,8 @@ def get_uuid():
     return "".join(random.choices(ALPHABET, k=8))
 
 
+# TODO: Use HGNC web service and compare
+# See: https://www.genenames.org/help/rest/#!/#tocAnchor-1-1-2
 def get_gene_name_to_ids_map():
     """Query BioMart to map gene names to ids.
 
@@ -104,35 +106,53 @@ def init_gdata(mdata):
     Returns
     -------
     gdata : dict
-        Dictionary containing HLCA cell types, marker names, marker
-        ids for each marker name, and all unique marker ids
+        Dictionary containing cell types, marker names, and marker ids
+        for each marker name all for each source publication, and all
+        unique marker ids
     """
+    # Collect cell types, and marker names and ids for each source
     nm2ids = get_gene_name_to_ids_map()
     gdata = {}
-    gdata["cell_types"] = {}
+    gdata["source"] = {}
     gdata["marker_ids"] = set()
-    for _, row in mdata.iterrows():
+    for source in ["HLCA", "CellRef"]:
+        gdata["source"][source] = {}
 
-        # Collect HLCA cell types
-        if pd.isna(row["HLCA_cellset"]):
-            continue
-        cell_type = row["HLCA_cellset"]
-        gdata["cell_types"][cell_type] = {}
+        # Iterate through all rows for each source
+        for _, row in mdata.iterrows():
 
-        # Collect marker names
-        if pd.isna(row["HLCA_NSForestMarkers"]):
-            continue
-        marker_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
-        gdata["cell_types"][cell_type]["marker_names"] = {}
-        for marker_name in marker_names:
+            # Collect cell types
+            if "cell_types" not in gdata["source"][source]:
+                gdata["source"][source]["cell_types"] = {}
+            if pd.isna(row[source + "_cellset"]):
+                continue
+            cell_type = row[source + "_cellset"]
 
-            # Collect marker id
-            marker_ids = map_gene_name_to_ids(marker_name, nm2ids)
-            gdata["cell_types"][cell_type]["marker_names"][marker_name] = {}
-            gdata["cell_types"][cell_type]["marker_names"][marker_name][
-                "marker_ids"
-            ] = marker_ids
-            gdata["marker_ids"] |= set(marker_ids)
+            # Collect marker names
+            if pd.isna(row[source + "_NSForestMarkers"]):
+                continue
+            marker_names = ast.literal_eval(row[source + "_NSForestMarkers"])
+            if cell_type not in gdata["source"][source]["cell_types"]:
+                gdata["source"][source]["cell_types"][cell_type] = {}
+            if "marker_names" not in gdata["source"][source]["cell_types"][cell_type]:
+                gdata["source"][source]["cell_types"][cell_type]["marker_names"] = {}
+            for marker_name in marker_names:
+
+                # Collect marker id
+                marker_ids = map_gene_name_to_ids(marker_name, nm2ids)
+                if (
+                    marker_name
+                    not in gdata["source"][source]["cell_types"][cell_type][
+                        "marker_names"
+                    ]
+                ):
+                    gdata["source"][source]["cell_types"][cell_type]["marker_names"][
+                        marker_name
+                    ] = {}
+                gdata["source"][source]["cell_types"][cell_type]["marker_names"][
+                    marker_name
+                ]["marker_ids"] = marker_ids
+                gdata["marker_ids"] |= set(marker_ids)
 
     # Marker ids are more convenient as a list
     gdata["marker_ids"] = list(gdata["marker_ids"])
@@ -241,16 +261,18 @@ def init_collections(adb_graph):
     # Define and create vertex collections
     vertex_collections = {}
     vertex_names = [
-        "anatomic_structure",
-        "biomarker_combination",
-        "cell_set",
-        "CL",
-        "gene_name",
-        "publication",
-        # TODO: Restore?
-        # "gene_id",              
-        "disease",
-        "drug_product",
+        "CL",  # Equivalent to cell_set_cls
+        "anatomic_structure_cls",
+        "gene_cls",
+        "transcript_cls",
+        "publication_ind",
+        "publication_cls",
+        "cell_set_ind",
+        "transcript_ind",
+        "biomarker_combination_ind",
+        "biomarker_combination_cls",
+        "disease_cls",
+        "drug_product_cls",
     ]
     for vertex_name in vertex_names:
         collection = adb.create_or_get_vertex_collection(adb_graph, vertex_name)
@@ -259,20 +281,21 @@ def init_collections(adb_graph):
     # Define and create edge collections
     edge_collections = {}
     vertex_name_pairs = [
-        ("biomarker_combination", "cell_set"),
-        ("CL", "anatomic_structure"),
-        ("cell_set", "CL"),
-        ("cell_set", "gene_name"),
-        ("cell_set", "publication"),
+        ("CL", "anatomic_structure_cls"),
+        ("CL", "gene_cls"),
+        ("gene_cls", "transcript_cls"),
+        ("publication_ind", "publication_cls"),
+        ("cell_set_ind", "CL"),
+        ("transcript_ind", "transcript_cls"),
+        ("biomarker_combination_ind", "biomarker_combination_ cls"),
+        ("cell_set_ind", "publication_ind"),
+        ("cell_set_ind", "transcript_ind"),
+        ("transcript_ind", "biomarker_combination_ind"),
+        ("biomarker_combination_ind", "cell_set_ind"),
         ("CL", "CL"),
-        ("gene_name", "biomarker_combination"),
-        # TODO: Restore?
-        # ("gene_name", "gene_id"),
-        # ("gene_id", "disease"),
-        ("gene_name", "disease"),
-        # ("drug_product", "gene_id"),
-        ("drug_product", "gene_name"),
-        ("drug_product", "disease"),
+        ("gene_cls", "disease_cls"),
+        ("drug_product_cls", "gene_cls"),
+        ("drug_product_cls", "disease_cls"),
     ]
     for vertex_name_pair in vertex_name_pairs:
         from_vertex = vertex_name_pair[0]
@@ -285,9 +308,10 @@ def init_collections(adb_graph):
     return vertex_collections, edge_collections
 
 
-def insert_anatomic_structure_and_publication_vertices(vertex_collections):
-    """Insert the single anatomic structure and two publication
-    vertices.
+def insert_individual_vertices(vertex_collections):
+    """Insert the one anatomic structure class, two publication
+    individual, one publication class, and one biomarker combination
+    class vertices.
 
     Parameters
     ----------
@@ -297,43 +321,79 @@ def insert_anatomic_structure_and_publication_vertices(vertex_collections):
 
     Returns
     -------
-    anatomic_structure_vertex : dict
+    anatomic_structure_cls_vertex : dict
         The ArangoDB anatomic structure vertex document
     publication_hlca_vertex : dict
         The ArangoDB HLCA publication vertex document
     publication_cellref_vertex,
         The ArangoDB CellRef publication vertex document
+    publication_cls_vertex,
+        The ArangoDB publication class vertex document
+    biomarker_combination_cls_vertex
+        The ArangoDB biomarker combination class vertex document
     """
     # Anatomic structure vertex
     _key = "Organ_12345"
-    if not vertex_collections["anatomic_structure"].has(_key):
-        vertex_collections["anatomic_structure"].insert({"_key": _key, "label": "lung"})
-    anatomic_structure_vertex = vertex_collections["anatomic_structure"].get(_key)
+    if not vertex_collections["anatomic_structure_cls"].has(_key):
+        vertex_collections["anatomic_structure_cls"].insert(
+            {"_key": _key, "label": "lung"}
+        )
+    anatomic_structure_cls_vertex = vertex_collections["anatomic_structure_cls"].get(
+        _key
+    )
 
-    # Publication vertices
-    _key = "HLCA_2023_Sikkema"
-    if not vertex_collections["publication"].has(_key):
-        vertex_collections["publication"].insert(
+    # Publication individual and class vertices
+    _key = "Sikkema-et-al-2023-Nat-Med"
+    if not vertex_collections["publication_ind"].has(_key):
+        vertex_collections["publication_ind"].insert(
             {
                 "_key": _key,
-                "label": "HLCA_2023_Sikkema_doi.org/10.1038/s41591-023-02327-2",
+                "label": "HLCA",
+                "citation": "Sikkema, L., Ramírez-Suástegui, C., Strobl, D.C. et al. An integrated cell atlas of the lung in health and disease. Nat Med 29, 1563–1577 (2023).",
+                "DOI": "https://doi.org/10.1038/s41591-023-02327-2",
             }
         )
-    publication_hlca_vertex = vertex_collections["publication"].get(_key)
-    _key = "cellRef_2023_Guo"
-    if not vertex_collections["publication"].has(_key):
-        vertex_collections["publication"].insert(
+    publication_hlca_vertex = vertex_collections["publication_ind"].get(_key)
+    _key = "Guo-et-al-2023-Nat-Commun"
+    if not vertex_collections["publication_ind"].has(_key):
+        vertex_collections["publication_ind"].insert(
             {
                 "_key": _key,
-                "label": "cellRef_2023_Guo_doi.org/10.1038/s41467-023-40173-5",
+                "label": "CellRef",
+                "citation": "Guo, M., Morley, M.P., Jiang, C. et al. Guided construction of single cell reference for human and mouse lung. Nat Commun 14, 4566 (2023).",
+                "DOI": "https://doi.org/10.1038/s41467-023-40173-5",
             }
         )
-    publication_cellref_vertex = vertex_collections["publication"].get(_key)
+    publication_cellref_vertex = vertex_collections["publication_ind"].get(_key)
+    _key = "NLMP00000000001"
+    if not vertex_collections["publication_cls"].has(_key):
+        vertex_collections["publication_cls"].insert(
+            {
+                "_key": _key,
+                "label": "NLM Publication",
+            }
+        )
+    publication_cls_vertex = vertex_collections["publication_cls"].get(_key)
+
+    # Biomarker combination class vertex
+    _key = "NLMB00000000001"
+    if not vertex_collections["biomarker_combination_cls"].has(_key):
+        vertex_collections["biomarker_combination_cls"].insert(
+            {
+                "_key": _key,
+                "label": "NLM Biomarker Combination",
+            }
+        )
+    biomarker_combination_cls_vertex = vertex_collections[
+        "biomarker_combination_cls"
+    ].get(_key)
 
     return (
-        anatomic_structure_vertex,
+        anatomic_structure_cls_vertex,
         publication_hlca_vertex,
         publication_cellref_vertex,
+        publication_cls_vertex,
+        biomarker_combination_cls_vertex,
     )
 
 
@@ -377,7 +437,9 @@ def insert_triples(triples, edge_collections):
             edge_collections[edge_name].insert(edge)
 
 
-def insert_vertices_and_edges_from_mdata_row(row, vertex_collections, edge_collections):
+def insert_vertices_and_edges_from_mdata_row(
+    row, vertex_collections, edge_collections, g2t
+):
     """Insert vertices and edges from each row of the manually curated
     data.
 
@@ -385,169 +447,299 @@ def insert_vertices_and_edges_from_mdata_row(row, vertex_collections, edge_colle
     ----------
     row : pd.Series
         Row Series from the DataFrame containing manually curated data
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
+    g2t : dict
+        Dictionary mapping gene to transcript class
 
     Returns
     -------
     None
     """
-    # Insert the anatomic structure and publication vertices
-    anatomic_structure_vertex, publication_hlca_vertex, publication_cellref_vertex = (
-        insert_anatomic_structure_and_publication_vertices(vertex_collections)
-    )
+    # Insert all individual vertices
+    (
+        anatomic_structure_cls_vertex,
+        publication_hlca_vertex,
+        publication_cellref_vertex,
+        publication_cls_vertex,
+        biomarker_combination_cls_vertex,
+    ) = insert_individual_vertices(vertex_collections)
 
-    # Insert biomarker combination vertices
-    hlca_gene_names = []
+    # Insert cell set class vertices
+    cell_set_cls_vertex = {}
+    if not (pd.isna(row["CL_cell_type"]) or pd.isna(row["CL_PURL"])):
+
+        # Get the number from the current CL term
+        number = None
+        CL_PURL = row["CL_PURL"]
+        if "http" in CL_PURL:
+            _, number, _, _, _ = parse_term(CL_PURL)
+
+        elif ":" in CL_PURL:
+            number = CL_PURL.split(":")[1]
+
+        else:
+            print(f"Could not get number from CL PURL: {CL_PURL}")
+
+        # Update the CL term vertex, if it, and the proposed addition
+        # exists
+        _key = number
+        cell_set_cls_vertex = vertex_collections["CL"].get(_key)
+        if cell_set_cls_vertex and pd.isna(
+            row["Proposed addition to CL definition or annotation property"]
+        ):
+            cell_set_cls_vertex["proposed definition"] = str(
+                row["Proposed addition to CL definition or annotation property"]
+            )
+            vertex_collections["CL"].update(cell_set_cls_vertex)
+        else:
+            cell_set_cls_vertex = {}
+
+    # Insert biomarker combination, and transcript individual vertices
+    hlca_transcript_names = []
     biomarker_combination_hlca_vertex = {}
-    cellref_gene_names = []
-    biomarker_combination_cellref_vertex = {}
-    if row["HLCA_NSForestMarkers"] == row["CellRef_NSForestMarkers"] and not pd.isna(
-        row["HLCA_NSForestMarkers"]
-    ):
-        hlca_gene_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
-        cellref_gene_names = hlca_gene_names
-        _key = "hlca-cellref-" + row["uuid"]
-        if not vertex_collections["biomarker_combination"].get(_key):
-            vertex_collections["biomarker_combination"].insert(
-                {
-                    "_key": _key,
-                    "label": hlca_gene_names,
-                }
+    if not pd.isna(row["HLCA_NSForestMarkers"]):
+        hlca_transcript_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
+        _key = "hlca-" + row["uuid"]
+        if not vertex_collections["biomarker_combination_ind"].has(_key):
+            vertex_collections["biomarker_combination_ind"].insert(
+                {"_key": _key, "label": hlca_transcript_names}
             )
         biomarker_combination_hlca_vertex = vertex_collections[
-            "biomarker_combination"
+            "biomarker_combination_ind"
         ].get(_key)
-        biomarker_combination_cellref_vertex = biomarker_combination_hlca_vertex
+    cellref_transcript_names = []
+    biomarker_combination_cellref_vertex = {}
+    if not pd.isna(row["CellRef_NSForestMarkers"]):
+        cellref_transcript_names = ast.literal_eval(row["CellRef_NSForestMarkers"])
+        _key = "cellref-" + row["uuid"]
+        if not vertex_collections["biomarker_combination_ind"].has(_key):
+            vertex_collections["biomarker_combination_ind"].insert(
+                {
+                    "_key": _key,
+                    "label": cellref_transcript_names,
+                }
+            )
+        biomarker_combination_cellref_vertex = vertex_collections[
+            "biomarker_combination_ind"
+        ].get(_key)
 
-    else:
-        if not pd.isna(row["HLCA_NSForestMarkers"]):
-            hlca_gene_names = ast.literal_eval(row["HLCA_NSForestMarkers"])
-            _key = "hlca-" + row["uuid"]
-            if not vertex_collections["biomarker_combination"].has(_key):
-                vertex_collections["biomarker_combination"].insert(
-                    {"_key": _key, "label": hlca_gene_names}
-                )
-            biomarker_combination_hlca_vertex = vertex_collections[
-                "biomarker_combination"
+    # Insert transcript individual and class, and gene vertices
+    transcript_ind_vertices = {}
+    for transcript in hlca_transcript_names:
+        _key = "hlca-" + transcript
+        if not vertex_collections["transcript_ind"].has(_key):
+            vertex_collections["transcript_ind"].insert(
+                {"_key": _key, "label": transcript, "publication": "HLCA"}
+            )
+            transcript_ind_vertices[transcript] = vertex_collections[
+                "transcript_ind"
             ].get(_key)
+    transcript_ind_vertices = {}
+    for transcript in cellref_transcript_names:
+        _key = "cellref-" + transcript
+        if not vertex_collections["transcript_ind"].has(_key):
+            vertex_collections["transcript_ind"].insert(
+                {"_key": _key, "label": transcript, "publication": "CellRef"}
+            )
+            transcript_ind_vertices[transcript] = vertex_collections[
+                "transcript_ind"
+            ].get(_key)
+    transcript_cls_vertices = {}
+    gene_cls_vertices = {}
+    if "count" not in g2t:
+        g2t["count"] = 0
+    for transcript in hlca_transcript_names + cellref_transcript_names:
+        gene = transcript
+        g2t["count"] += 1
 
-        if not pd.isna(row["CellRef_NSForestMarkers"]):
-            cellref_gene_names = ast.literal_eval(row["CellRef_NSForestMarkers"])
-            _key = "cellref-" + row["uuid"]
-            if not vertex_collections["biomarker_combination"].has(_key):
-                vertex_collections["biomarker_combination"].insert(
-                    {
-                        "_key": _key,
-                        "label": cellref_gene_names,
-                    }
-                )
-            biomarker_combination_cellref_vertex = vertex_collections[
-                "biomarker_combination"
-            ].get(_key)
+        # Transcript class
+        _key = f"NLMT{g2t['count']:011d}"
+        g2t[gene] = _key  # TODO: Not used, but might be useful later. Remove?
+        if not vertex_collections["transcript_ind"].has(_key):
+            vertex_collections["transcript_ind"].insert(
+                {
+                    "_key": _key,
+                    "label": transcript,
+                }
+            )
+            transcript_cls_vertices[gene] = vertex_collections["transcript_ind"].get(
+                _key
+            )
+
+        # Gene class
+        _key = gene
+        if not vertex_collections["gene_cls"].has(_key):
+            vertex_collections["gene_cls"].insert(
+                {
+                    "_key": _key,
+                    "label": gene,
+                }
+            )
+            gene_cls_vertices[gene] = vertex_collections["gene_cls"].get(_key)
 
     # Insert cell set vertices
     cell_set_hlca_vertex = {}
     if not pd.isna(row["HLCA_cellset"]):
         _key = "hlca-" + row["uuid"]
-        if not vertex_collections["cell_set"].has(_key):
-            vertex_collections["cell_set"].insert(
+        if not vertex_collections["cell_set_ind"].has(_key):
+            vertex_collections["cell_set_ind"].insert(
                 {
                     "_key": _key,
                     "label": row["HLCA_cellset"],
                 }
             )
-        cell_set_hlca_vertex = vertex_collections["cell_set"].get(_key)
+        cell_set_hlca_vertex = vertex_collections["cell_set_ind"].get(_key)
     cell_set_cellref_vertex = {}
-    if not pd.isna(row["cellref_cellset"]):
+    if not pd.isna(row["CellRef_cellset"]):
         _key = "cellref-" + row["uuid"]
-        if not vertex_collections["cell_set"].has(_key):
-            vertex_collections["cell_set"].insert(
+        if not vertex_collections["cell_set_ind"].has(_key):
+            vertex_collections["cell_set_ind"].insert(
                 {
                     "_key": _key,
-                    "label": row["cellref_cellset"],
+                    "label": row["CellRef_cellset"],
                 }
             )
-        cell_set_cellref_vertex = vertex_collections["cell_set"].get(_key)
-
-    # Insert cell type vertices
-    # TODO: Decide whether we need these cell types, or not
-    # cell_type_hlca_vertex = {}
-    # if not pd.isna(row["Cell_type_HLCA"]):
-    #     _key = "hlca-" + row["uuid"]
-    #     if not vertex_collections["CL"].has(_key):
-    #         vertex_collections["CL"].insert(
-    #             {
-    #                 "_key": _key,
-    #                 "label": row["Cell_type_HLCA"],
-    #             }
-    #         )
-    #     cell_type_hlca_vertex = vertex_collections["CL"].get(_key)
-    # cell_type_cellref_vertex = {}
-    # if not pd.isna(row["Cell_type_cellref"]):
-    #     _key = "cellref-" + row["uuid"]
-    #     if not vertex_collections["CL"].has(_key):
-    #         vertex_collections["CL"].insert(
-    #             {
-    #                 "_key": _key,
-    #                 "label": row["Cell_type_cellref"],
-    #             }
-    #         )
-    #     cell_type_cellref_vertex = vertex_collections["CL"].get(_key)
-    cell_type_cl_vertex = {}
-    if not (
-        pd.isna(row["CL_cell_type"])
-        or pd.isna(row["CL_PURL"])
-        # TODO: Decide if we need to test if these definitions are present
-        # or pd.isna(row["Current CL definition"])
-        # or pd.isna(row["Proposed addition to CL definition or annotation property."])
-    ):
-        # Get the number from the current CL term
-        if "http" in row["CL_PURL"]:
-            _, number, _, _, _ = parse_term(row["CL_PURL"])
-
-        elif ":" in row["CL_PURL"]:
-            number = row["CL_PURL"].split(":")[1]
-
-        # Update the CL term vertex, if it exists
-        _key = number
-        cell_type_cl_vertex = vertex_collections["CL"].get(_key)
-        if cell_type_cl_vertex:
-            cell_type_cl_vertex["proposed definition"] = str(
-                row["Proposed addition to CL definition or annotation property."]
-            )
-            vertex_collections["CL"].update(cell_type_cl_vertex)
-        else:
-            cell_type_cl_vertex = {}
-        # TODO: Remove
-        # if not vertex_collections["CL"].has(_key):
-        #     vertex_collections["CL"].insert(
-        #         {
-        #             "_key": _key,
-        #             "label": row["CL_cell_type"],
-        #             "purl": row["CL_PURL"],
-        #             "current definition": str(row["Current CL definition"]),
-        #             "proposed definition": str(
-        #                 row["Proposed addition to CL definition or annotation property."]
-        #             ),
-        #         }
-        #     )
-        # cell_type_cl_vertex = vertex_collections["CL"].get(_key)
-
-    # Insert gene vertices
-    for gene_name in hlca_gene_names + cellref_gene_names:
-        _key = gene_name
-        if not vertex_collections["gene_name"].has(_key):
-            vertex_collections["gene_name"].insert(
-                {
-                    "_key": _key,
-                    "label": gene_name,
-                }
-            )
-            gene_name_vertex = vertex_collections["gene_name"].get(_key)
+        cell_set_cellref_vertex = vertex_collections["cell_set_ind"].get(_key)
 
     # Initialize triples
     triples = []
 
-    # Define and collect (biomarker combination, IS_MARKER_FOR, cell set) triples
+    # Define and collect (cell_set_cls (CL), PART_OF, anatomical_structure_cls) triples
+    triples.extend(
+        [
+            (cell_set_cls_vertex, {"label": "PART_OF"}, anatomic_structure_cls_vertex),
+        ]
+    )
+
+    # Define and collect (cell_set_cls (CL), EXPRESSES, gene_cls) triples
+    for gene_cls_vertex in gene_cls_vertices:
+        triples.append(
+            (
+                cell_set_cls_vertex,
+                {"label": "EXPRESSES", "is_shortcut": True},
+                gene_cls_vertex,
+            )
+        )
+
+        # Define and collect (gene_cls, PRODUCES, transcript_cls) triples
+        transcript_cls_vertex = transcript_cls_vertices[gene_cls_vertex["_key"]]
+        triples.append((gene_cls_vertex, {"label": "PRODUCES"}, transcript_cls_vertex))
+
+    # Define and collect (publication_ind, IS_INSTANCE, publication_cls) triples
+    triples.extend(
+        [
+            (publication_hlca_vertex, {"label": "IS_INSTANCE"}, publication_cls_vertex),
+            (
+                publication_cellref_vertex,
+                {"label": "IS_INSTANCE"},
+                publication_cls_vertex,
+            ),
+        ]
+    )
+
+    # Define and collect (cell_set_ind, IS_INSTANCE, cell_set_cls (CL)) triples
+    if row["predicate_HLCA"] in [
+        "skos:broadMatch",
+        "skos:exactMatch",
+        "skos:relatedMatch",
+    ]:
+        triples.append(
+            (
+                cell_set_hlca_vertex,
+                {"label": "IS_INSTANCE", "match": row["predicate_HLCA"]},
+                cell_set_cls_vertex,
+            ),
+        )
+    if row["predicate_CellRef"] in [
+        "skos:broadMatch",
+        "skos:exactMatch",
+        "skos:relatedMatch",
+    ]:
+        triples.append(
+            (
+                cell_set_cellref_vertex,
+                {"label": "IS_INSTANCE", "match": row["predicate_CellRef"]},
+                cell_set_cls_vertex,
+            ),
+        )
+
+    # Define and collect (transcript_ind, IS_INSTANCE, transcript_cls) triples
+    for transcript_ind_vertex in transcript_ind_vertices:
+        transcript_cls_vertex = transcript_cls_vertices[transcript_ind_vertex["label"]]
+        triples.append(
+            (transcript_ind_vertex, {"label", "IS_INSTANCE"}, transcript_cls_vertex)
+        )
+
+    # Define and collect (biomarker_combination_ind, IS_INSTANCE, biomarker_combination_cls) triples
+    triples.extend(
+        [
+            (
+                biomarker_combination_hlca_vertex,
+                {"label": "IS_INSTANCE"},
+                biomarker_combination_cls_vertex,
+            ),
+            (
+                biomarker_combination_cellref_vertex,
+                {"label": "IS_INSTANCE"},
+                biomarker_combination_cls_vertex,
+            ),
+        ]
+    )
+
+    # Define and collect (cell_set_ind, SOURCE, publication_ind) triples
+    triples.extend(
+        [
+            (cell_set_hlca_vertex, {"label": "SOURCE"}, publication_hlca_vertex),
+            (cell_set_cellref_vertex, {"label": "SOURCE"}, publication_cellref_vertex),
+        ]
+    )
+
+    # Define and collect:
+    #   (cell_set_ind, HAS_PART, transcript_ind), and
+    #   (transcript_ind, MEMBER_OF, biomarker_combination_ind) triples
+    for transcript_ind_vertex in transcript_ind_vertices:
+        publication = transcript_ind_vertex["publication"]
+        if publication == "HLCA":
+            triples.extend(
+                [
+                    (
+                        cell_set_hlca_vertex,
+                        {"label": "HAS_PART"},
+                        transcript_ind_vertex,
+                    ),
+                    (
+                        transcript_ind_vertex,
+                        {"label": "MEMBER_OR"},
+                        biomarker_combination_hlca_vertex,
+                    ),
+                ]
+            )
+
+        elif publication == "CellRef":
+            triples.extend(
+                [
+                    (
+                        cell_set_cellref_vertex,
+                        {"label": "HAS_PART"},
+                        transcript_ind_vertex,
+                    ),
+                    (
+                        transcript_ind_vertex,
+                        {"label": "MEMBER_OF"},
+                        biomarker_combination_cellref_vertex,
+                    ),
+                ]
+            )
+
+        else:
+            print(f"Unknown publication: {publication}")
+
+    # Define and collect (biomarker_combination_ind, IS_MARKER_FOR, cell_set_ind) triples
     triples.extend(
         [
             (
@@ -563,75 +755,6 @@ def insert_vertices_and_edges_from_mdata_row(row, vertex_collections, edge_colle
         ]
     )
 
-    # Define and collect (cell type, PART_OF, anatomic structure) triples
-    triples.extend(
-        [
-            # (cell_type_hlca_vertex, {"label": "PART_OF"}, anatomic_structure_vertex),
-            # (cell_type_cellref_vertex, {"label": "PART_OF"}, anatomic_structure_vertex),
-            (cell_type_cl_vertex, {"label": "PART_OF"}, anatomic_structure_vertex),
-        ]
-    )
-
-    # Define and collect (cell set, IS_INSTANCE, cell type) triples
-    if (
-        row["predicate_HLCA"] == "skos:exactMatch"
-        or row["predicate_HLCA"] == "skos:relatedMatch"
-    ):
-        triples.extend(
-            [
-                # (cell_set_hlca_vertex, {"label": "IS_INSTANCE"}, cell_type_hlca_vertex),
-                (
-                    cell_set_hlca_vertex,
-                    {"label": "IS_INSTANCE", "match": row["predicate_HLCA"]},
-                    cell_type_cl_vertex,
-                ),
-                # (cell_set_cellref_vertex, {"label": "IS_INSTANCE"}, cell_type_cellref_vertex),
-                (
-                    cell_set_cellref_vertex,
-                    {"label": "IS_INSTANCE", "match": row["predicate_HLCA"]},
-                    cell_type_cl_vertex,
-                ),
-            ]
-        )
-
-    # Define and collect (cell set, EXPRESSES, gene_name) triples
-    for gene_name in hlca_gene_names:
-        _key = gene_name
-        gene_name_vertex = vertex_collections["gene_name"].get(_key)
-        triples.append((cell_set_hlca_vertex, {"label": "EXPRESSES"}, gene_name_vertex))
-    for gene_name in cellref_gene_names:
-        _key = gene_name
-        gene_name_vertex = vertex_collections["gene_name"].get(_key)
-        triples.append(
-            (cell_set_cellref_vertex, {"label": "EXPRESSES"}, gene_name_vertex)
-        )
-
-    # Define and collect (cell set, SOURCE, publication) triples
-    triples.extend(
-        [
-            (cell_set_hlca_vertex, {"label": "SOURCE"}, publication_hlca_vertex),
-            (cell_set_cellref_vertex, {"label": "SOURCE"}, publication_cellref_vertex),
-        ]
-    )
-
-    # Define and collect (gene_name, PART_OF, biomarker combination) triples
-    for gene_name in hlca_gene_names:
-        _key = gene_name
-        gene_name_vertex = vertex_collections["gene_name"].get(_key)
-        triples.append(
-            (gene_name_vertex, {"label": "PART_OF"}, biomarker_combination_hlca_vertex)
-        )
-    for gene_name in cellref_gene_names:
-        _key = gene_name
-        gene_name_vertex = vertex_collections["gene_name"].get(_key)
-        triples.append(
-            (
-                gene_name_vertex,
-                {"label": "PART_OF"},
-                biomarker_combination_cellref_vertex,
-            )
-        )
-
     # Insert all triples
     insert_triples(triples, edge_collections)
 
@@ -644,11 +767,20 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
 
     Parameters
     ----------
-    gdata
-    gene_name
-    gene_id
-    vertex_collections
-    edge_collections
+    gdata : dict
+        Dictionary containing cell types, marker names, and marker ids
+        for each marker name all for each source publication, and all
+        unique marker ids
+    gene_name : str
+        Gene name
+    gene_id : str
+        Ensemble gene stable identifier
+    vertex_collections : dict
+        A dictionary with vertex name keys containing
+        arango.collection.VertexCollection instance values
+    edge_collections : dict
+        A dictionary with edge name keys containing
+        arango.collection.EdgeCollection instance values
 
     Returns
     -------
@@ -658,25 +790,9 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
     triples = []
 
     # Get gene name vertex
-    gene_name_vertex = {}
-    if vertex_collections["gene_name"].has(gene_name):
-        gene_name_vertex = vertex_collections["gene_name"].get(gene_name)
-
-    # TODO: Restore?
-    # Insert gene id vertex
-    # _key = gene_id
-    # if not vertex_collections["gene_id"].has(_key):
-    #     vertex_collections["gene_id"].insert(
-    #         {
-    #             "_key": _key,
-    #             "label": gene_id,
-    #         }
-    #     )
-    # gene_id_vertex = vertex_collections["gene_id"].get(_key)
-
-    # TODO: Restore?
-    # Define and collect (gene name, HAS, gene id) triples
-    # triples.append((gene_name_vertex, {"label": "HAS"}, gene_id_vertex))
+    gene_cls_vertex = {}
+    if vertex_collections["gene_cls"].has(gene_name):
+        gene_cls_vertex = vertex_collections["gene_cls"].get(gene_name)
 
     # Get diseases and drugs
     diseases = []
@@ -686,25 +802,24 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
         drugs = gdata["gene_ids"][gene_id]["resources"]["drugs"]
 
     for disease in diseases:
+        # TODO: Use keyword argument with suitable default, and set in command line arguments
         if disease["score"] < 0.5:
             continue
 
         # Insert disease vertex
         _key = disease["id"]
-        if not vertex_collections["disease"].has(_key):
+        if not vertex_collections["disease_cls"].has(_key):
             disease["_key"] = _key
             disease["label"] = disease["name"]
-            vertex_collections["disease"].insert(disease)
-        disease_vertex = vertex_collections["disease"].get(_key)
+            vertex_collections["disease_cls"].insert(disease)
+        disease_cls_vertex = vertex_collections["disease_cls"].get(_key)
 
-        # Define and collect (gene id, IS_BASIS_FOR_CONDITION, disease) triples
+        # Define and collect (gene_cls, IS_BASIS_FOR_CONDITION, disease_cls) triples
         triples.append(
             (
-                # TODO: Restore?
-                # gene_id_vertex,
-                gene_name_vertex,
+                gene_cls_vertex,
                 {"label": "IS_BASIS_FOR_CONDITION"},
-                disease_vertex,
+                disease_cls_vertex,
             )
         )
 
@@ -712,34 +827,32 @@ def insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
 
         # Insert drug product vertex
         _key = drug["id"]
-        if not vertex_collections["drug_product"].has(_key):
+        if not vertex_collections["drug_product_cls"].has(_key):
             drug["_key"] = _key
             drug["label"] = drug["name"]
-            vertex_collections["drug_product"].insert(drug)
-        drug_product_vertex = vertex_collections["drug_product"].get(_key)
+            vertex_collections["drug_product_cls"].insert(drug)
+        drug_product_cls_vertex = vertex_collections["drug_product_cls"].get(_key)
 
-        # Define and collect (drug product, MOLECULARLY_INTERACTS_WITH, gene id) triples
+        # Define and collect (drug_product_cls, MOLECULARLY_INTERACTS_WITH, gene_cls) triples
         triples.append(
             (
-                drug_product_vertex,
+                drug_product_cls_vertex,
                 {"label": "MOLECULARLY_INTERACTS_WITH"},
-                # TODO: Restore?
-                # gene_id_vertex,
-                gene_name_vertex,
+                gene_cls_vertex,
             )
         )
 
         # Get diseases vertex
         _key = drug["disease_id"]
-        if vertex_collections["disease"].has(_key):
-            disease_vertex = vertex_collections["disease"].get(_key)
+        if vertex_collections["disease_cls"].has(_key):
+            disease_cls_vertex = vertex_collections["disease_cls"].get(_key)
 
-            # Define and collect (drug product, IS_SUBSTANCE_THAT_TREATS, disease) triples
+            # Define and collect (drug_product_cls, IS_SUBSTANCE_THAT_TREATS, disease_cls) triples
             triples.append(
                 (
-                    drug_product_vertex,
+                    drug_product_cls_vertex,
                     {"label": "IS_SUBSTANCE_THAT_TREATS"},
-                    disease_vertex,
+                    disease_cls_vertex,
                 )
             )
 
@@ -757,7 +870,7 @@ def main():
     )
     parser.add_argument(
         "--mdata-filename",
-        default="HLCA_CellRef_matching_ver3_import1.xlsm",
+        default="HLCA_CellRef-ver-0.4.0.xlsm",
         help="Name of file containing manually curated data",
     )
     group = parser.add_argument_group(
@@ -805,20 +918,26 @@ def main():
     print("Defining and creating vertex and edge collections")
     vertex_collections, edge_collections = init_collections(adb_graph)
 
+    print("Code implements HLCA-CellRef-Triples ver-0.6.0")
+
+    g2t = {}
     n_row = mdata.shape[0]
     for i_row, row in mdata.iterrows():
-        print(f"Inserting vertices and edges from row {i_row} (of {n_row}) of the manually curated data")
+        print(f"Inserting mdata vertices and edges from row {i_row} (of {n_row})")
         insert_vertices_and_edges_from_mdata_row(
-            row, vertex_collections, edge_collections
+            row, vertex_collections, edge_collections, g2t
         )
 
-    for _, d in gdata["cell_types"].items():
-        for gene_name, e in d["marker_names"].items():
-            for gene_id in e["marker_ids"]:
-                print(f"Inserting vertices and edges for gene name {gene_name} and id {gene_id} from the gget data")
-                insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
-                    gdata, gene_name, gene_id, vertex_collections, edge_collections
-                )
+    for source, s in gdata["source"].items():
+        for cell_type, t in s["cell_types"].items():
+            for gene_name, n in t["marker_names"].items():
+                for gene_id in n["marker_ids"]:
+                    print(
+                        f"Inserting gdata vertices and edges for source {source} gene name {gene_name} and id {gene_id}"
+                    )
+                    insert_vertices_and_edges_from_gdata_for_gene_name_and_id(
+                        gdata, gene_name, gene_id, vertex_collections, edge_collections
+                    )
 
 
 if __name__ == "__main__":
