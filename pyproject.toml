@@ -10,11 +10,14 @@ package-mode = false
 python = ">=3.10,<3.12"
 arango-rdf = ">=1.0.0"
 cellxgene-census = "^1.14.1"
+gget = ">=0.29.0"
 ontogpt = "^0.3.14"
-scikit-misc = "^0.3.1"
 plotly = "^5.22.0"
+pybiomart = ">=0.2.0"
 python-arango = ">=7.4,<8.0"
 rdflib = ">=7.0.0"
+scanpy = ">=1.10.4"
+scikit-misc = "^0.3.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
