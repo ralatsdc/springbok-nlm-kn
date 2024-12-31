@@ -8,7 +8,8 @@ import pandas as pd
 
 ARANGO_URL = "http://localhost:8529"
 ARANGO_CLIENT = ArangoClient(hosts=ARANGO_URL)
-SYS_DB = ARANGO_CLIENT.db("_system", username="root", password="")
+ARANGO_ROOT_PASSWORD = os.getenv("ARANGO_ROOT_PASSWORD", "")
+SYS_DB = ARANGO_CLIENT.db("_system", username="root", password=ARANGO_ROOT_PASSWORD)
 
 DATA_DIR = "../data"
 
@@ -36,7 +37,7 @@ def create_or_get_database(database_name):
 
     # Connect to database
     print(f"Getting ArangoDB database: {database_name}")
-    db = ARANGO_CLIENT.db(database_name, username="root", password="")
+    db = ARANGO_CLIENT.db(database_name, username="root", password=ARANGO_ROOT_PASSWORD)
 
     return db
 
